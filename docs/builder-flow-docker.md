@@ -1,11 +1,11 @@
 # Builder flow: Docker
 
-Run the full builder-scaffold flow inside the Sui dev container — no Sui tools needed on your host. The same steps work for any extension example (**smart_gate_extension**, **storage_unit_extension**, or your own); the shared flow uses **smart_gate_extension** for publish and scripts.
+Run the full builder-scaffold flow inside the Sui dev container — no Sui tools needed on your host. The same steps work for any extension example (**smart_gate_extension**, **storage_unit_extension**, or your own); 
 
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) installed
-- [README Quickstart](../README.md#quickstart) — clone builder-scaffold.
+- [README Quickstart](../README.md#quickstart) — clone builder-scaffold if not done before.
 
 
 ## 1. Start the container
@@ -23,19 +23,47 @@ You get a fresh local node, three funded accounts, and the workspace at `/worksp
 
 Use localnet, or switch to testnet (see [Using testnet](../docker/readme.md#using-testnet)).
 
-## 3. Run the end-to-end flow
+## 3. Follow the end-to-end flow
 
-Run all commands **inside the container**, in order. Each link opens the shared section in [builder-flow.md](builder-flow.md):
+Run all commands **inside the container**.
 
-| Step | Section |
-|------|---------|
-| 1 | [Deploy world and create test resources](builder-flow.md#deploy-world-and-create-test-resources) |
-| 2 | [Copy world artifacts into builder-scaffold](builder-flow.md#copy-world-artifacts-into-builder-scaffold) |
-| 3 | [Configure builder-scaffold .env](builder-flow.md#configure-builder-scaffold-env) |
-| 4 | [Publish custom contract](builder-flow.md#publish-custom-contract) |
-| 5 | [Interact with Custom Contract](builder-flow.md#run-scripts) |
+### 3a. Deploy world and create test resources**
 
-**Docker context:** Paths are `/workspace/world-contracts` and `/workspace/builder-scaffold`. For the first section (deploy world), create `.env` by running `/workspace/scripts/generate-world-env.sh` ([docker/readme.md](../docker/readme.md)).
+> **Coming soon:** These manual steps will be simplified into a single setup command. Move package dependencies will resolve automatically using [MVR](https://docs.sui.io/guides/developer/packages/move-package-management).
+
+From your workspace directory (parent of `builder-scaffold`), clone world-contracts and deploy:
+
+```bash
+git clone -b v0.0.14 https://github.com/evefrontier/world-contracts.git
+cd world-contracts
+```
+Run `/workspace/scripts/generate-world-env.sh` to create `.env` from the container keys (see [docker/readme.md](../docker/readme.md)).
+
+Then:
+
+```bash
+pnpm install
+pnpm deploy-world localnet    # or testnet
+pnpm configure-world localnet # or testnet
+pnpm create-test-resources localnet   # or testnet
+```
+
+### 3b. Copy world artifacts into builder-scaffold
+
+Follow builder-flow.md#copy-world-artifacts-into-builder-scaffold
+
+### 3c.  Publish custom contract
+
+Follow builder-flow.md#publish-custom-contract
+
+### 3d. Configure builder-scaffold .env
+
+Follow builder-flow.md#configure-builder-scaffold-env
+
+### 3e. Interact with Custom Contract
+
+Follow builder-flow.md#run-scripts
+
 
 ## 4. Tear down the container when done
 
@@ -43,7 +71,7 @@ Run all commands **inside the container**, in order. Each link opens the shared 
 2. **Stop and remove the containers** — from your host:
 
 ```bash
-cd docker
+# From docker folder
 docker compose down
 ```
 

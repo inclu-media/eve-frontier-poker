@@ -106,7 +106,7 @@ Or use a GraphQL client like [Altair](https://altairgraphql.dev/) or [Insomnia](
 ## Clean up / fresh start
 
 ```bash
-docker compose down --volumes
+docker compose down
 docker compose build
 docker compose run --rm --service-ports sui-dev
 ```
@@ -127,7 +127,7 @@ docker system prune -a --volumes
    `rm Move.lock && sui move build -e testnet`
 
 2. **"Unpublished dependencies: World"?**  
-   Deploy world-contracts first (see [builder-flow.md — Deploy world and create test resources](../docs/builder-flow.md#deploy-world-and-create-test-resources)), then pass its publication file:
+   Deploy world-contracts first (see [builder-flow.md — Deploy world and create test resources](../docs/builder-flow.md)), then pass its publication file:
 
    ```bash
    sui client test-publish --build-env testnet --pubfile-path ../../deployments/localnet/Pub.localnet.toml

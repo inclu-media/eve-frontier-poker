@@ -1,20 +1,17 @@
 # Builder flow: Host
 
-Run the builder-scaffold flow on your host, targeting **testnet** or a **local network**. The same steps work for any extension example (**smart_gate_extension**, **storage_unit_extension**, or your own); the shared flow uses **smart_gate_extension** for publish and scripts.
+Run the builder-scaffold flow on your host, targeting **testnet** or a **local network**. The same steps work for any extension example (**smart_gate_extension**, **storage_unit_extension**, or your own); 
 
 > **Prefer Docker?** See [builder-flow-docker.md](builder-flow-docker.md) to run the full flow inside a container with no host tooling.
 
 ## Prerequisites
 
-- Sui CLI, Node.js, and pnpm installed on your [host](https://docs.evefrontier.com/quickstart/environment-setup#manual-setup-by-os).
-- For testnet: funded accounts (e.g. from [Sui testnet faucet](https://faucet.sui.io/))
-- For local: a running Sui local node (see below)
+- [Sui CLI](https://docs.sui.io/guides/developer/getting-started/sui-install), Node.js, and pnpm installed on your host
+  - suiup is recommended for easy upgrades on sui versions
+  - Install pnpm `npm i -g pnpm`
+- [README Quickstart](../README.md#quickstart) — clone builder-scaffold if not done before.
 
-## 1. Clone builder-scaffold (if needed)
-
-See [README Quickstart](../README.md#quickstart).
-
-## 2. Choose your network
+## 1. Choose your network
 
 **Testnet** — no extra setup; set your CLI to testnet and fund keys via the [faucet](https://faucet.sui.io/).
 
@@ -36,12 +33,10 @@ See [README Quickstart](../README.md#quickstart).
 
    ```bash
    sui client new-env --alias localnet --rpc http://127.0.0.1:9000
-   sui client switch --env localnet
    ```
 
 3. Wait for the container to log **RPC ready** before running deploy/scripts.
 
-Import the container’s keys from `docker/.env.sui` into your host config if needed — see [docker/readme.md — Connect to local node from host](../docker/readme.md#connect-to-local-node-from-host).
 
 **Using Sui CLI directly (node on host):**
 
@@ -57,14 +52,14 @@ sui client new-env --alias localnet --rpc http://127.0.0.1:9000
 
 </details>
 
-Switch your CLI to the network you're using: `sui client switch --env localnet` or `sui client switch --env testnet`.
+Switch your Host CLI to the network you're using: `sui client switch --env localnet` or `sui client switch --env testnet`.
 
-## 3. Fund keys (same in three places)
+## 2. Fund keys (same in three places)
 
 Use the same keys in: Sui keytool (for publish), world-contracts `.env`, and builder-scaffold `.env`.
 
 **If using the Docker local node:**  
-Use the three keys in `docker/.env.sui`; import them into keytool and copy into both `.env` files. Localnet auto-funds them; for testnet, fund all three via the faucet.
+Use the three keys in `docker/.env.sui`; import the admin key into keytool and copy all the keys into both `.env` files. Localnet auto-funds them; for testnet, fund all three via the faucet.
 
 **If using your own node (e.g. `sui start --with-faucet` on host):**
 
@@ -79,16 +74,58 @@ Use the three keys in `docker/.env.sui`; import them into keytool and copy into 
 - Use ADMIN for publishing: `sui client switch --address <ADMIN_ADDRESS>`
 - Set these keys and addresses in world-contracts `.env` and builder-scaffold `.env` in the shared flow steps below.
 
-## 4. Run the end-to-end flow
+## 3. Follow the end-to-end flow
 
-Run all commands **on your host**, in order. 
+### 3a. Deploy world and create test resources**
 
-| Step | Section |
-|------|---------|
-| 1 | [Deploy world and create test resources](builder-flow.md#deploy-world-and-create-test-resources) |
-| 2 | [Copy world artifacts into builder-scaffold](builder-flow.md#copy-world-artifacts-into-builder-scaffold) |
-| 3 | [Configure builder-scaffold .env](builder-flow.md#configure-builder-scaffold-env) |
-| 4 | [Publish custom contract](builder-flow.md#publish-custom-contract) |
-| 5 | [Interact with Custom Contract](builder-flow.md#run-scripts) |
+> **Coming soon:** These manual steps will be simplified into a single setup command. See [setup-world/readme.md](../setup-world/readme.md) for details.
 
-**Host context:** **world-contracts** is a sibling of **builder-scaffold** (e.g. `workspace/world-contracts`, `workspace/builder-scaffold`). For the first section (deploy world), use `cp env.example .env` in world-contracts and fill keys/addresses manually.
+From your workspace directory (parent of `builder-scaffold`), clone `world-contracts` at the stable tag as a sibling and deploy:
+
+**Before running the commands below set these environment variables in these [world-contracts/.env](world-contracts/.env) file:**
+- `SUI_NETWORK` = testnet (or localnet)
+- `ADMIN_ADDRESS` = "sui client active-address"
+- `SPONSOR_ADDRESS` = "sui client active-address" can be the same as `ADMIN_ADDRESS`
+- `ADMIN_PRIVATE_KEY` = "sui keytool export --key-identity <ADMIN_ADDRESS>" and copy the `exportedPrivateKey` (`suiprivkeyXYZ`)
+- `PLAYER_A_PRIVATE_KEY` = Create another wallet and get private key and fund it
+- `PLAYER_B_PRIVATE_KEY` = Create another wallet and get private key and fund it
+- `GOVERNOR_PRIVATE_KEY` (OPTIONAL) = "sui client active-address" can be the same as `ADMIN_PRIVATE_KEY`
+
+**ATTENTION:**
+The ADMIN_PRIVATE_KEY must have at least 5 sui.
+
+```bash
+cd ..   # workspace (parent of builder-scaffold)
+git clone -b v0.0.14 https://github.com/evefrontier/world-contracts.git
+cd world-contracts
+cp env.example .env
+# Set SUI_NETWORK=testnet (or localnet) and fill in your keys
+# For development, ADMIN_ADDRESS and SPONSOR_ADDRESS can be the same
+# GOVERNOR_PRIVATE_KEY is optional or can be the same as ADMIN_PRIVATE_KEY
+pnpm install
+pnpm deploy-world localnet       # or testnet
+pnpm configure-world localnet    # or testnet
+pnpm create-test-resources localnet   # or testnet
+```
+
+Check all the created resources in the explorer:
+- [localnet explorer](https://custom.suiscan.xyz/custom/checkpoints?network=http%3A%2F%2Flocalhost%3A9000)
+- [devnet explorer](https://suiscan.xyz/devnet/)
+- [testnet explorer](https://suiscan.xyz/testnet/)
+- [mainnet explorer](https://suiscan.xyz/)
+
+### 3b. Copy world artifacts into builder-scaffold
+
+Follow builder-flow.md#copy-world-artifacts-into-builder-scaffold
+
+### 3c.  Publish custom contract
+
+Follow builder-flow.md#publish-custom-contract
+
+### 3d. Configure builder-scaffold .env
+
+Follow builder-flow.md#configure-builder-scaffold-env
+
+### 3e. Interact with Custom Contract
+
+Follow builder-flow.md#run-scripts

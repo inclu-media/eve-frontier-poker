@@ -21,7 +21,7 @@ cd builder-scaffold
 
 | Path | When to use |
 |------|--------------|
-| **[Docker](./docs/builder-flow-docker.md)** | No Sui/Node on host; run everything in a container (local or testnet). |
+| **[Docker](./docs/builder-flow-docker.md)** | No Sui/Node on host; run everything in a container (local or testnet). Recommended for local testing  |
 | **[Host](./docs/builder-flow-host.md)** | Sui CLI + Node.js on your machine; target local or testnet. |
 | **[Building on an existing world](./docs/building-on-existing-world.md)** | World already deployed (e.g. shared server, live game); you don't deploy the world yourself. *(WIP – guide coming soon; use Docker/Host flows for now.)* |
 
