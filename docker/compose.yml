@@ -6,6 +6,8 @@ services:
     ports:
       # Exposes local Sui node RPC — for local development only
       - "9000:9000"
+      # Exposes Vite DApp Server
+      - "5173:5173"
     volumes:
       - sui-config:/root/.sui
       - ../:/workspace/builder-scaffold

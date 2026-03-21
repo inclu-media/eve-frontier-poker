@@ -1,22 +1,11 @@
-import { Box, Container, Flex, Heading } from "@radix-ui/themes";
+import { Box, Flex, Heading } from "@radix-ui/themes";
 import { WalletStatus } from "./WalletStatus";
-import { abbreviateAddress, useConnection } from "@evefrontier/dapp-kit";
-import { useCurrentAccount } from "@mysten/dapp-kit-react";
+import { ConnectButton } from "@mysten/dapp-kit-react";
+import { PokerTable } from "./PokerTable";
 
 function App() {
-  /**
-   * STEP 2 — Wallet connection
-   *
-   * useConnection() (@evefrontier/dapp-kit) → handleConnect, handleDisconnect;
-   * isConnected, walletAddress, hasEveVault. useCurrentAccount()
-   * (@mysten/dapp-kit-react) → account (e.g. account.address) for UI. abbreviateAddress()
-   * (@evefrontier/dapp-kit) for display.
-   */
-  const { handleConnect, handleDisconnect } = useConnection();
-  const account = useCurrentAccount();
-
   return (
-    <Box style={{ padding: "20px" }}>
+    <Box style={{ padding: "20px", background: "#050505", minHeight: "100vh", color: "#e0e0e0" }}>
       <Flex
         position="sticky"
         px="4"
@@ -25,21 +14,27 @@ function App() {
         style={{
           display: "flex",
           justifyContent: "space-between",
+          borderBottom: "1px solid #00ffcc",
+          marginBottom: "30px",
+          fontFamily: "'Space Mono', monospace"
         }}
       >
-        <Heading>EVE Frontier dApp Starter Template</Heading>
-
-        {/* STEP 2 — Connect/disconnect; show abbreviated address in header. */}
-        <button
-          onClick={() =>
-            account?.address ? handleDisconnect() : handleConnect()
-          }
-        >
-          {account ? abbreviateAddress(account?.address) : "Connect Wallet"}
-        </button>
+        <Heading size="3" style={{ color: "#00ffcc", letterSpacing: "2px", textTransform: "uppercase" }}>Frontier Poker Extension</Heading>
+        
+        <Box style={{ display: "flex", alignItems: "center" }}>
+          <ConnectButton 
+            style={{ background: "#111", border: "1px solid #00ffcc", color: "#00ffcc", cursor: "pointer", fontFamily: "inherit", borderRadius: "0px", textTransform: "uppercase" }} 
+          />
+        </Box>
       </Flex>
-      {/* STEP 3 — Same hooks (useConnection, useCurrentAccount) drive WalletStatus; state stays in sync. */}
-      <WalletStatus />
+      
+      <Flex direction="column" gap="6" align="center">
+        <PokerTable />
+        
+        <Box style={{ opacity: 0.5, scale: "0.8" }}>
+          <WalletStatus />
+        </Box>
+      </Flex>
     </Box>
   );
 }

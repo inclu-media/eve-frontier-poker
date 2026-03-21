@@ -1,23 +1,7 @@
 import {
-  // Core fetch functions
-  executeGraphQLQuery, // Raw GraphQL execution
-  getObjectByAddress, // Object with BCS data
-  getObjectWithJson, // Object with JSON contents
-  getObjectWithDynamicFields, // Object + dynamic fields
-
-  // Assembly + Owner (most useful for EVE)
-  getAssemblyWithOwner, // Assembly + character info in one call
-  getObjectAndCharacterOwner, // Lower-level version
-
-  // Ownership queries
-  getOwnedObjectsByType, // Objects of type owned by address
-  getOwnedObjectsByPackage, // Objects from package owned by address
-
-  // Type-based queries
-  getObjectsByType, // All objects of a type (paginated)
-  getSingletonObjectByType, // First object of a type
-
-  // Transformation functions
+  getObjectWithJson,
+  getAssemblyWithOwner,
+  getOwnedObjectsByType,
   transformToAssembly,
 } from "@evefrontier/dapp-kit";
 
@@ -28,8 +12,8 @@ import {
  * Other helpers: executeGraphQLQuery, getOwnedObjectsByType, getObjectsByType, getSingletonObjectByType.
  */
 async function fetchAssemblyInfo(assemblyId: string) {
-  // 1. Fetch raw data from GraphQL
-  const { moveObject, character } = await getAssemblyWithOwner(assemblyId);
+  console.log("Fetching Assembly details...");
+  const { moveObject, assemblyOwner } = await getAssemblyWithOwner(assemblyId);
 
   if (!moveObject) {
     console.error("Assembly not found");
@@ -39,15 +23,15 @@ async function fetchAssemblyInfo(assemblyId: string) {
   // 2. Access raw JSON data directly
   const rawJson = moveObject.contents.json;
   console.log("Raw assembly data:", rawJson);
-  console.log("Character owner:", character);
+  console.log("Assembly owner:", assemblyOwner);
 
   // 3. Or transform to typed Assembly object
   const assembly = await transformToAssembly(assemblyId, moveObject, {
-    character,
+    character: assemblyOwner,
   });
   console.log("Transformed assembly:", assembly);
 
-  return { assembly, character };
+  return { assembly, assemblyOwner };
 }
 
 /** STEP 5 — getObjectWithJson() for object by ID with JSON. */
