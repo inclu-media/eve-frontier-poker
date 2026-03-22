@@ -57,9 +57,9 @@ export function useZkLogin() {
 
     const getEpoch = async () => {
         try {
-            // @ts-ignore - Some versions of the Sui SDK might not expose this method directly on the dapp-kit Client
-            if (typeof suiClient.getLatestSuiSystemState === "function") {
-                const state = await suiClient.getLatestSuiSystemState();
+            const clientAny = suiClient as any;
+            if (typeof clientAny.getLatestSuiSystemState === "function") {
+                const state = await clientAny.getLatestSuiSystemState();
                 return Number(state.epoch) + 5;
             }
             throw new Error("SDK method missing");
