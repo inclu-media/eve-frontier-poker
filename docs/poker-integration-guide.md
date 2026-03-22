@@ -89,3 +89,11 @@ The Poker DApp is configured for automatic deployment via Vercel.
 1. **Automatic Deployments:** Because the project is linked to GitHub, Vercel will automatically trigger a new build and deploy the application every time you `git push` to your repository.
 2. **Environment Variables:** For the live web version to function, you MUST configure the Vercel project's Environment Variables (under Project Settings) to match your local `dapps/.env` file. Without defining `VITE_POKER_EXTENSION_CONFIG_ID`, `VITE_STORAGE_UNIT_ID`, `VITE_BUILDER_SCENE_PACKAGE_ID`, and `VITE_SUI_RPC_URL`, the deployed app will not be able to interact with the correct smart contracts or network.
 3. **Live URL:** The production DApp is currently accessible from: [https://eve-frontier-poker-1dvocuqkb-inclu-medias-projects.vercel.app/](https://eve-frontier-poker-1dvocuqkb-inclu-medias-projects.vercel.app/)
+
+## 6. Authentication Fallback
+
+The Poker DApp has dual-support for EVE Frontier zkLogin and traditional Web3 wallets (like the Sui Wallet or Martian extension). 
+
+If you do not have a registered EVE Frontier OAuth `CLIENT_ID` with properly configured redirect URIs, simply ensure that `VITE_EVE_OAUTH_CLIENT_ID` is empty or completely removed from your `dapps/.env` file. 
+
+When this environment variable is missing, the application will automatically bypass the EVE Frontier login flow and instead unconditionally render the standard Sui `<ConnectButton />`. This allows players to connect their Web3 wallets directly and play the Poker DApp while you sort out the custom OAuth flow credentials with CCP.

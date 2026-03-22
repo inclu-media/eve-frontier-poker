@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Box, Button, Heading, Text } from "@radix-ui/themes";
-import { useCurrentClient } from "@mysten/dapp-kit-react";
+import { Box, Button, Heading, Text, Flex } from "@radix-ui/themes";
+import { GearIcon } from "@radix-ui/react-icons";
+import { useCurrentAccount, useCurrentClient, useDAppKit } from "@mysten/dapp-kit-react";
 import { Transaction } from "@mysten/sui/transactions";
 import { useZkLogin } from "./hooks/useZkLogin";
 
@@ -23,8 +24,13 @@ function getCardParts(cardVal: number) {
 }
 
 export function PokerTable() {
-  const { zkAddress, isLoggedIn, signAndExecuteZkTx } = useZkLogin();
+  const walletAccount = useCurrentAccount();
+  const { signAndExecuteTransaction } = useDAppKit();
+  const { zkAddress, isLoggedIn: isZkLoggedIn, signAndExecuteZkTx } = useZkLogin();
   const suiClient = useCurrentClient();
+  
+  const activeAddress = isZkLoggedIn ? zkAddress : walletAccount?.address;
+  const isLoggedIn = isZkLoggedIn || !!walletAccount;
   
   const [gameSession, setGameSession] = useState<any>(null);
   const [heldCards, setHeldCards] = useState<number[]>([]);
@@ -35,6 +41,11 @@ export function PokerTable() {
   const [selectedFuelId, setSelectedFuelId] = useState<string>("");
   const [finalGameResult, setFinalGameResult] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  
+  const [storageOwner, setStorageOwner] = useState<string | null>(null);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [houseFuelsList, setHouseFuelsList] = useState<any[]>([]);
+  const [regularFuelsList, setRegularFuelsList] = useState<any[]>([]);
 
   const targetFuelRecord = availableFuels.find(f => f.id === selectedFuelId);
   const currentTargetTypeId = targetFuelRecord ? targetFuelRecord.typeId?.toString() : "78437";
@@ -63,9 +74,9 @@ export function PokerTable() {
 
 
   useEffect(() => {
-    if (!zkAddress) return;
+    if (!activeAddress) return;
     refreshSession();
-  }, [zkAddress]);
+  }, [activeAddress]);
 
   useEffect(() => {
     async function fetchStorageData() {
@@ -75,10 +86,20 @@ export function PokerTable() {
           return;
       }
       try {
-        const suResponse = await fetch(rpcUrl, {
+        const suPromise = fetch(rpcUrl, {
               method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sui_getObject", params: [storageUnitId, { showContent: true }] })
         }).then(r => r.json());
+        
+        const charPromise = fetch(rpcUrl, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sui_getObject", params: [import.meta.env.VITE_CHARACTER_ID, { showContent: true }] })
+        }).then(r => r.json());
+
+        const [suResponse, charResponse] = await Promise.all([suPromise, charPromise]);
+        
+        const suOwner = charResponse?.result?.data?.content?.fields?.character_address;
+        setStorageOwner(suOwner || null);
         
         // Import lightweight hash on the fly since we are inside a React component
         const blake2b = (await import('@noble/hashes/blake2b')).blake2b;
@@ -129,16 +150,24 @@ export function PokerTable() {
             }
         }
         
-        const fuelsList = Object.keys(allFuels).map(typeId => ({
+        const regularList = Object.keys(allFuels).map(typeId => ({
             id: typeId,
             typeId: typeId,
             quantity: allFuels[typeId].toString()
         }));
         
-        setAvailableFuels(fuelsList);
+        const houseList = Object.keys(houseFuels).map(typeId => ({
+            id: typeId,
+            typeId: typeId,
+            quantity: houseFuels[typeId].toString()
+        }));
         
-        const currentSelected = selectedFuelId || (fuelsList.length > 0 ? fuelsList[0].id : "");
-        if (!selectedFuelId && fuelsList.length > 0) setSelectedFuelId(currentSelected);
+        setRegularFuelsList(regularList);
+        setHouseFuelsList(houseList);
+        setAvailableFuels(regularList);
+        
+        const currentSelected = selectedFuelId || (regularList.length > 0 ? regularList[0].id : "");
+        if (!selectedFuelId && regularList.length > 0) setSelectedFuelId(currentSelected);
         
         if (currentSelected && houseFuels[currentSelected]) {
             setMaxStake(Math.floor(houseFuels[currentSelected] / 800));
@@ -159,11 +188,11 @@ export function PokerTable() {
   }, [storageUnitId, selectedFuelId, refreshTrigger]);
 
   const refreshSession = async () => {
-    if (!zkAddress) return;
+    if (!activeAddress) return;
     try {
       // Get all GameSession objects owned by the player
       const result = await suiClient.core.listOwnedObjects({
-        owner: zkAddress,
+        owner: activeAddress,
         type: `${pkgId}::poker::GameSession`,
         include: { json: true },
       });
@@ -225,9 +254,13 @@ export function PokerTable() {
         ]
       });
 
-      txb.setSender(zkAddress!);
-      const txBytes = await txb.build({ client: suiClient });
-      await signAndExecuteZkTx(txBytes);
+      if (isZkLoggedIn) {
+        txb.setSender(activeAddress!);
+        const txBytes = await txb.build({ client: suiClient });
+        await signAndExecuteZkTx(txBytes);
+      } else {
+        await signAndExecuteTransaction({ transaction: txb });
+      }
 
       console.log("Dealt cards");
       refreshSession();
@@ -264,11 +297,16 @@ export function PokerTable() {
         ]
       });
 
-      txb.setSender(zkAddress!);
-      const txBytes = await txb.build({ client: suiClient });
-      const result: any = await signAndExecuteZkTx(txBytes);
-      
-      const digest = result.digest || result.effects?.transactionDigest || result.Transaction?.digest;
+      let digest;
+      if (isZkLoggedIn) {
+        txb.setSender(activeAddress!);
+        const txBytes = await txb.build({ client: suiClient });
+        const result: any = await signAndExecuteZkTx(txBytes);
+        digest = result.digest || result.effects?.transactionDigest || result.Transaction?.digest;
+      } else {
+        const result: any = await signAndExecuteTransaction({ transaction: txb });
+        digest = result.digest || result.effects?.transactionDigest || result.Transaction?.digest;
+      }
       
       if (!digest) {
           setMessage("No digest found! Check console.");
@@ -347,8 +385,41 @@ export function PokerTable() {
       fontFamily: "'Space Mono', monospace",
       maxWidth: "500px",
       margin: "0 auto",
-      boxShadow: "0 0 15px var(--color-orange-glow)"
+      boxShadow: "0 0 15px var(--color-orange-glow)",
+      position: "relative"
     }}>
+      {/* ADMIN OVERLAY MASK */}
+      {adminOpen && (
+        <Box style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(10, 10, 15, 0.95)", zIndex: 100, border: "1px solid var(--color-frontier-orange)", padding: "20px", overflowY: "auto", backdropFilter: "blur(4px)" }}>
+           <Flex justify="between" align="center" mb="4" style={{ borderBottom: "1px solid var(--color-gunmetal)", paddingBottom: "10px" }}>
+              <Heading size="5" style={{ color: "var(--color-frontier-orange)", textTransform: "uppercase", letterSpacing: "2px" }}>Storage Admin</Heading>
+              <Button onClick={() => setAdminOpen(false)} style={{ background: "none", color: "var(--color-text-muted)", cursor: "pointer", border: "1px solid var(--color-gunmetal)", borderRadius: "0px", fontFamily: "'Space Mono', monospace" }}>[X] CLOSE</Button>
+           </Flex>
+           
+           <Box mb="5">
+               <Heading size="3" style={{ color: "var(--color-matrix-green)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>House Open Storage</Heading>
+               {houseFuelsList.length > 0 ? houseFuelsList.map(f => (
+                   <Flex key={f.id} justify="between" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
+                       <Text style={{ fontFamily: "'Space Mono', monospace", color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
+                       <Text style={{ fontFamily: "'Space Mono', monospace", color: "var(--color-matrix-green)", fontWeight: "bold" }}>{f.quantity}</Text>
+                   </Flex>
+               )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No liquidity trapped in house.</Text>}
+           </Box>
+           
+           <Box mb="5">
+               <Heading size="3" style={{ color: "var(--color-frontier-orange)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>Player Regular Storage</Heading>
+               {regularFuelsList.length > 0 ? regularFuelsList.map(f => (
+                   <Flex key={f.id} justify="between" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
+                       <Text style={{ fontFamily: "'Space Mono', monospace", color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
+                       <Text style={{ fontFamily: "'Space Mono', monospace", color: "var(--color-frontier-orange)", fontWeight: "bold" }}>{f.quantity}</Text>
+                   </Flex>
+               )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No available fuel stakes.</Text>}
+           </Box>
+           
+           <Text style={{ display: "block", marginTop: "30px", color: "var(--color-text-muted)", fontSize: "11px", fontStyle: "italic", textAlign: "center" }}>* Fuel transfer functionality mapping to Move PTBs coming soon.</Text>
+        </Box>
+      )}
+
       <Box 
         mb="4" 
         style={{ 
@@ -370,6 +441,16 @@ export function PokerTable() {
         <Heading size="6" style={{ letterSpacing: "4px", textTransform: "uppercase", color: "var(--color-frontier-orange)", position: "relative", zIndex: 1 }}>BURN :: RATE</Heading>
         <Text size="2" style={{ letterSpacing: "2px", textTransform: "uppercase", color: "var(--color-text-muted)", position: "relative", zIndex: 1, display: "block", marginTop: "4px" }}>Fuel Poker</Text>
         
+        {storageOwner && activeAddress && storageOwner === activeAddress && (
+             <Button 
+               onClick={() => setAdminOpen(true)}
+               variant="ghost"
+               style={{ position: "absolute", top: "12px", right: "20px", color: "var(--color-frontier-orange)", cursor: "pointer", zIndex: 10, padding: 0 }}
+             >
+               <GearIcon width="24" height="24" />
+             </Button>
+        )}
+
         <Box style={{ position: "absolute", bottom: "12px", right: "20px", textAlign: "right", zIndex: 1 }}>
           {maxStake !== null && (
             <Text 
