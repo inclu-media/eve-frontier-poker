@@ -17,8 +17,10 @@ The core logic resides in the `poker.move` smart assembly. Deployment to the Sui
      ```
    * **Testnet:**  
      ```bash
-     sui client publish -e testnet
+     sui client switch --env official-testnet
+     sui client publish
      ```
+     *(Note: We specifically override the environment config and use the unflagged proxy to bypass strict Sui TOML regex parsers for testnet aliases).*
 3. Upon deployment, record the resulting **Package ID** and the **PokerConfig Object ID** created by the initialization function.
 
 ## 2. Environment Variables (`.env`)
@@ -34,24 +36,40 @@ STORAGE_UNIT_ID=<Your initialized Storage Unit Object ID>
 
 ### DApp Environment `dapps/.env` (For Frontend GUI)
 ```env
-NEXT_PUBLIC_SUI_NETWORK=testnet
-NEXT_PUBLIC_PACKAGE_ID=<Deployed Poker Package ID>
-NEXT_PUBLIC_POKER_CONFIG_ID=<Created PokerConfig Object ID>
-NEXT_PUBLIC_STORAGE_UNIT_ID=<Your initialized Storage Unit Object ID>
+VITE_SUI_RPC_URL=https://fullnode.testnet.sui.io:443
+VITE_BUILDER_SCENE_PACKAGE_ID=<Deployed Poker Package ID>
+VITE_POKER_EXTENSION_CONFIG_ID=<Created PokerConfig Object ID>
+VITE_STORAGE_UNIT_ID=<Your initialized Storage Unit Object ID>
+VITE_CHARACTER_ID=<Your Game Character Object ID>
 ```
 
-## 3. Support Scripts (`ts-scripts/storage_poker_extension/`)
-A suite of TypeScript logic scripts exists to bridge the bare metal deployment into a playable state. These must be executed via `pnpm tsx` to seed the world state before the DApp goes live.
+## 3. Initialization Scripts Order (`ts-scripts/storage_poker_extension/`)
+A suite of TypeScript logic scripts exists to bridge the bare metal deployment into a playable state. You MUST execute these sequentially via `pnpm tsx` to seed the world state and configure the smart contract before launching the DApp.
 
-*   `setup-poker-storage.ts`
-    *   **Usage:** `pnpm tsx ts-scripts/storage_poker_extension/setup-poker-storage.ts`
-    *   **Purpose:** Initializes the "House Bank" by creating a physical EVE Storage Unit and locking preliminary liquidity inside it so that players can actually win payouts against the House. Provides the `STORAGE_UNIT_ID`.
-*   `mint-fuel.ts`
-    *   **Usage:** `pnpm tsx ts-scripts/storage_poker_extension/mint-fuel.ts`
-    *   **Purpose:** An automated batch-minting utility for developers/testers. It natively loops through the 6 accepted official EVE Fuel/Goo resource IDs (e.g. Black Goo, Orange Goo) and mints + deposits quantities of them into the target wallet to allow for infinite local testing of the DApp staking features without mining.
-*   `poker-flow.ts`
-    *   **Usage:** `pnpm tsx ts-scripts/storage_poker_extension/poker-flow.ts`
-    *   **Purpose:** A headless simulator. Executes the full Poker deposit, deal, swap, read, and payout lifecycle entirely in the terminal. Used strictly to validate that the Move smart contract math and vector logic is sound across network boundaries before spending time building the React frontend.
+### Step 1: Configure Rules & Authorize
+*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/poker-flow.ts`
+*   **Purpose:** Executes the Admin `set_poker_config` module on the newly deployed Config Object to explicitly whitelist valid Fuel type-IDs. It then officially authorizes your Storage Unit to be acted upon via the Poker Extension framework.
+
+### Step 2: Initialize House Bank Storage
+*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/fund-house.ts`
+*   **Purpose:** Creates a physical EVE Storage Unit and locks initial house liquidity inside it so that the contract can mathematically guarantee House payouts during the `max_win` fund check. This requires the framework authorization from Step 1.
+*   **Action:** Copy the resulting `STORAGE_UNIT_ID` to your root and `/dapps` `.env` files.
+
+### Step 3: Seed Player Stakes
+*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/deposit-stake.ts`
+*   **Purpose:** Simulates the manual player action of depositing physical Fuel items directly into the Storage Unit's active inventory. Because the Poker DApp now safely reads directly from the Storage Unit rather than sweeping the player's wallet, this script seeds the storage with valid fuel stacks to allow you to interact with the frontend's Stake Dropdown selector without actually needing to mine in-game.
+
+### Step 4: Verify Balances (Optional)
+*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/check-funds.ts`
+*   **Purpose:** A diagnostic verification tool that queries the live SUI network to map the specific Resource Quantities currently escrowed in the Storage Unit. It distinctly separates and tallies the House Funds (Open Inventory mapped via `fund-house.ts`) against the Player Stakes (Regular Inventory mapped via `deposit-stake.ts`).
+
+### Step 5: Defund House (Optional/Cleanup)
+*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/defund-house.ts`
+*   **Purpose:** Sweeps all trapped liquidity (House Funds) from the Storage Unit's open inventory back into the Admin Wallet. Useful for clean slate testing or reclaiming funds.
+
+### Step 6: Empty Player Storage (Optional/Cleanup)
+*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/empty-storage.ts`
+*   **Purpose:** Sweeps all specific Player stakes from their regular inventory partition in the Storage Unit, throwing the extracted fuel into a void address, effectively restoring the storage unit to absolute zero liquidity. Useful for clearing out residue before new testing rounds.
 
 ## 4. DApp Frontend Integration
 Once the Smart Assembly is published, environmental variables are synced, and the House Storage is funded:

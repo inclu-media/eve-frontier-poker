@@ -5,8 +5,13 @@ edition = "2024"
 [dependencies]
 world = { local = "../../../world-contracts/contracts/world" }
 
+[addresses]
+storage_poker_extension = "0x0"
+world = "0xa52f8676cc9df24ca22c5d7c5509657f906228cf2ecb9686d9c7b06b7b074fe3"
+
 [environments]
 testnet_internal = "4c78adac"
 testnet_utopia = "4c78adac"
 testnet_stillness = "4c78adac"
 localnet = "0"
+official-testnet = "0"

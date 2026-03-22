@@ -45,7 +45,7 @@ async function main() {
             throw new Error(`OwnerCap not found for storage unit ${storageUnitId}`);
         }
 
-        console.log("-> Minting 100,000 units of Fuel to use as House Liquidity...");
+        console.log("-> Minting 100,000 units of All 6 Fuel types to use as House Liquidity...");
 
         // ==========================
         // TRANSACTION 1: MINT FUEL
@@ -60,32 +60,39 @@ async function main() {
             arguments: [txMint.object(characterId), txMint.object(storageUnitOwnerCapId)],
         });
 
-        txMint.moveCall({
-            target: `${config.packageId}::${MODULES.STORAGE_UNIT}::game_item_to_chain_inventory`,
-            typeArguments: [`${config.packageId}::${MODULES.STORAGE_UNIT}::StorageUnit`],
-            arguments: [
-                txMint.object(storageUnitId),
-                txMint.object(config.adminAcl),
-                txMint.object(characterId),
-                ownerCapMint,
-                txMint.pure.u64(9999999n), // random unique item ID for the stack
-                txMint.pure.u64(78437n), // type_id (fuel)
-                txMint.pure.u64(10n), // volume
-                txMint.pure.u32(1000000), // quantity deposited into player inventory
-            ],
-        });
+        // Testnet Fuel Type IDs configured for Poker
+        const fuelTypeIds = [78437n, 78515n, 78516n, 84868n, 88319n, 88335n];
+        let withdrawnItems = [];
 
-        const withdrawnItem = txMint.moveCall({
-            target: `${config.packageId}::${MODULES.STORAGE_UNIT}::withdraw_by_owner`,
-            typeArguments: [`${config.packageId}::${MODULES.STORAGE_UNIT}::StorageUnit`],
-            arguments: [
-                txMint.object(storageUnitId),
-                txMint.object(characterId),
-                ownerCapMint,
-                txMint.pure.u64(78437n), // type_id
-                txMint.pure.u32(100000), // withdraw 100,000 for the house
-            ],
-        });
+        for (let i = 0; i < fuelTypeIds.length; i++) {
+            txMint.moveCall({
+                target: `${config.packageId}::${MODULES.STORAGE_UNIT}::game_item_to_chain_inventory`,
+                typeArguments: [`${config.packageId}::${MODULES.STORAGE_UNIT}::StorageUnit`],
+                arguments: [
+                    txMint.object(storageUnitId),
+                    txMint.object(config.adminAcl),
+                    txMint.object(characterId),
+                    ownerCapMint,
+                    txMint.pure.u64(BigInt(Date.now() + i)), // random unique item ID for the stack
+                    txMint.pure.u64(fuelTypeIds[i]), // type_id (fuel)
+                    txMint.pure.u64(10n), // volume
+                    txMint.pure.u32(100000), // EXACTLY the amount needed for the house
+                ],
+            });
+
+            const withdrawnItem = txMint.moveCall({
+                target: `${config.packageId}::${MODULES.STORAGE_UNIT}::withdraw_by_owner`,
+                typeArguments: [`${config.packageId}::${MODULES.STORAGE_UNIT}::StorageUnit`],
+                arguments: [
+                    txMint.object(storageUnitId),
+                    txMint.object(characterId),
+                    ownerCapMint,
+                    txMint.pure.u64(fuelTypeIds[i]), // type_id
+                    txMint.pure.u32(100000), // withdraw 100,000 for the house
+                ],
+            });
+            withdrawnItems.push(withdrawnItem);
+        }
 
         txMint.moveCall({
             target: `${config.packageId}::${MODULES.CHARACTER}::return_owner_cap`,
@@ -93,8 +100,8 @@ async function main() {
             arguments: [txMint.object(characterId), ownerCapMint, receiptMint],
         });
 
-        // TRICK: We transfer the withdrawn item to the ADMIN ADDRESS so the admin can call fund_house
-        txMint.transferObjects([withdrawnItem], adminAddress);
+        // TRICK: We transfer the withdrawn items to the ADMIN ADDRESS so the admin can call fund_house
+        txMint.transferObjects(withdrawnItems, adminAddress);
 
         let mintResult;
         try {
@@ -105,11 +112,14 @@ async function main() {
         }
 
         const createdObjects = mintResult.objectChanges?.filter((o: any) => o.type === "created") || [];
-        const itemObj = createdObjects.find((o: any) => o.objectType?.includes("::inventory::Item"));
+        const itemObjs = createdObjects.filter((o: any) => o.objectType?.includes("::inventory::Item"));
 
-        if (!itemObj) throw new Error("Could not find the minted Item object transferred to Admin!");
+        if (itemObjs.length === 0) throw new Error("Could not find the minted Item objects transferred to Admin!");
 
-        console.log(`✅ Liquidity Item Minted: ${(itemObj as any).objectId}`);
+        console.log(`✅ ${itemObjs.length} Liquidity Items Minted successfully.`);
+
+        console.log("-> Waiting for Sui blockchain indexer to synchronize newly minted items...");
+        await new Promise(r => setTimeout(r, 2000));
 
         // ==========================
         // TRANSACTION 2: FUND HOUSE
@@ -120,15 +130,17 @@ async function main() {
         txFund.setSender(adminAddress);
         txFund.setGasOwner(adminAddress);
 
-        txFund.moveCall({
-            target: `${builderPackageId}::poker::fund_house`,
-            arguments: [
-                txFund.object(adminCapId),
-                txFund.object(storageUnitId),
-                txFund.object(characterId),
-                txFund.object((itemObj as any).objectId),
-            ],
-        });
+        for (const itemObj of itemObjs) {
+            txFund.moveCall({
+                target: `${builderPackageId}::poker::fund_house`,
+                arguments: [
+                    txFund.object(adminCapId),
+                    txFund.object(storageUnitId),
+                    txFund.object(characterId),
+                    txFund.object((itemObj as any).objectId),
+                ],
+            });
+        }
 
         const fundResult = await playerCtx.client.signAndExecuteTransaction({
              transaction: txFund,

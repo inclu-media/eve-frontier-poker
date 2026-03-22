@@ -60,6 +60,7 @@ export function PokerTable() {
   const configId = import.meta.env.VITE_POKER_EXTENSION_CONFIG_ID || "0x123";
   const storageUnitId = import.meta.env.VITE_STORAGE_UNIT_ID || "0x123";
   const characterId = import.meta.env.VITE_CHARACTER_ID || "0x123";
+  const rpcUrl = import.meta.env.VITE_SUI_RPC_URL || "https://fullnode.testnet.sui.io:443";
 
 
   useEffect(() => {
@@ -68,44 +69,41 @@ export function PokerTable() {
   }, [account]);
 
   useEffect(() => {
-    async function fetchHouseBalance() {
+    async function fetchStorageData() {
       if (!storageUnitId || storageUnitId === "0x123") {
-          console.log("No valid storageUnitId for house balance", storageUnitId);
-          setMaxStake(0); // Fallback UI
+          setMaxStake(0);
+          setAvailableFuels([]);
           return;
       }
       try {
-        let debugTrace = "Start | ";
-        const suResponse = await fetch("https://fullnode.testnet.sui.io:443", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                  jsonrpc: "2.0",
-                  id: 1,
-                  method: "sui_getObject",
-                  params: [storageUnitId, { showContent: true }]
-              })
+        const suResponse = await fetch(rpcUrl, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sui_getObject", params: [storageUnitId, { showContent: true }] })
         }).then(r => r.json());
         
-        const suFields = suResponse?.result?.data?.content?.fields;
-        const invKeys = suFields?.inventory_keys;
-        debugTrace += `Keys: ${invKeys?.length || '0'} | `;
+        // Import lightweight hash on the fly since we are inside a React component
+        const blake2b = (await import('@noble/hashes/blake2b')).blake2b;
+
+        const idBytes = new Uint8Array(32);
+        const hex = storageUnitId.replace('0x', '');
+        for (let i = 0; i < 32; i++) {
+            idBytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+        }
+        const strBytes = new TextEncoder().encode("open_inventory");
+        const combinedBytes = new Uint8Array(idBytes.length + strBytes.length);
+        combinedBytes.set(idBytes, 0);
+        combinedBytes.set(strBytes, idBytes.length);
+        const digest = blake2b(combinedBytes, { dkLen: 32 });
+        const openInvKey = "0x" + Array.from(digest).map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const invKeys = suResponse?.result?.data?.content?.fields?.inventory_keys || [];
+        let allFuels: Record<string, number> = {}; 
+        let houseFuels: Record<string, number> = {};
         
-        if (invKeys && invKeys.length > 0) {
-          let overallMaxStake = 0;
-          
-          for (const openInvKey of invKeys) {
-            debugTrace += `DynF[${openInvKey.substring(0,4)}...] `;
-            
-            const dynResponse = await fetch("https://fullnode.testnet.sui.io:443", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    jsonrpc: "2.0",
-                    id: 1,
-                    method: "suix_getDynamicFieldObject",
-                    params: [storageUnitId, { type: "0x2::object::ID", value: openInvKey }]
-                })
+        for (const iterInvKey of invKeys) {
+            const dynResponse = await fetch(rpcUrl, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "suix_getDynamicFieldObject", params: [storageUnitId, { type: "0x2::object::ID", value: iterInvKey }] })
             }).then(r => r.json());
             
             let invData = dynResponse?.result?.data?.content?.fields?.value;
@@ -113,95 +111,53 @@ export function PokerTable() {
             
             const itemsArray = invData?.items || [];
             let contents: any[] = [];
-            if (Array.isArray(itemsArray)) {
-                contents = itemsArray;
-            } else if (itemsArray.fields && itemsArray.fields.contents) {
-                contents = itemsArray.fields.contents;
-            } else if (itemsArray.contents) {
-                contents = itemsArray.contents;
-            }
-            debugTrace += `Contents: ${contents.length} | `;
+            if (Array.isArray(itemsArray)) contents = itemsArray;
+            else if (itemsArray.fields && itemsArray.fields.contents) contents = itemsArray.fields.contents;
+            else if (itemsArray.contents) contents = itemsArray.contents;
             
-            const targetFuel = availableFuels.find(f => f.id === selectedFuelId);
-            const targetTypeId = targetFuel ? targetFuel.typeId?.toString() : "78437";
-
-            const fuelEntry = contents.find((item: any) => {
-              const itemKeyStr = item.key?.toString() || item.fields?.key?.toString();
-              return itemKeyStr === targetTypeId;
-            });
-            
-            if (fuelEntry) {
-              const val = fuelEntry.value || fuelEntry.fields?.value;
-              const quantity = Number(val?.quantity || val?.fields?.quantity || 0);
-              const curStake = Math.floor(quantity / 800);
-              debugTrace += `Matches! Qty:${quantity} Max:${curStake} ; `;
-              if (curStake > overallMaxStake) {
-                 overallMaxStake = curStake;
-              }
-            } else {
-              debugTrace += `Missed ${targetTypeId} ; `;
+            for (const item of contents) {
+               const typeId = item.key?.toString() || item.fields?.key?.toString();
+               if (typeId && FUEL_NAMES[typeId]) {
+                  const val = item.value || item.fields?.value;
+                  const qty = Number(val?.quantity || val?.fields?.quantity || 0);
+                  
+                  if (iterInvKey === openInvKey) {
+                      houseFuels[typeId] = (houseFuels[typeId] || 0) + qty;
+                  } else {
+                      allFuels[typeId] = (allFuels[typeId] || 0) + qty;
+                  }
+               }
             }
-          }
-          
-          console.log("House Liquidity Evaluation:", debugTrace);
-          setMaxStake(overallMaxStake);
-        } else {
-            console.log(`NO_KEYS_FOUND: ${JSON.stringify(suResponse?.result?.error || 'Unknown Error')}`);
-            setMaxStake(0); 
         }
+        
+        const fuelsList = Object.keys(allFuels).map(typeId => ({
+            id: typeId,
+            typeId: typeId,
+            quantity: allFuels[typeId].toString()
+        }));
+        
+        setAvailableFuels(fuelsList);
+        
+        const currentSelected = selectedFuelId || (fuelsList.length > 0 ? fuelsList[0].id : "");
+        if (!selectedFuelId && fuelsList.length > 0) setSelectedFuelId(currentSelected);
+        
+        if (currentSelected && houseFuels[currentSelected]) {
+            setMaxStake(Math.floor(houseFuels[currentSelected] / 800));
+        } else {
+            setMaxStake(0);
+        }
+        
       } catch (err: any) {
         console.log(`CATCH_ERR: ${err.message}`);
         setMaxStake(0); 
+        setAvailableFuels([]);
       }
     }
     
-    fetchHouseBalance();
-    const interval = setInterval(fetchHouseBalance, 5000);
+    fetchStorageData();
+    const interval = setInterval(fetchStorageData, 5000);
     return () => clearInterval(interval);
-  }, [storageUnitId, availableFuels, selectedFuelId, refreshTrigger]);
-
-  useEffect(() => {
-    async function fetchFuels() {
-      if (!account?.address || !suiClient) return;
-      try {
-        let hasMore = true;
-        let nextCursor = null;
-        const fuels = [];
-        
-        while (hasMore) {
-          const worldPkg = "0xa52f8676cc9df24ca22c5d7c5509657f906228cf2ecb9686d9c7b06b7b074fe3";
-          const result: any = await (suiClient.core as any).listOwnedObjects({
-            owner: account.address,
-            type: `${worldPkg}::inventory::Item`,
-            include: { json: true },
-            cursor: nextCursor,
-          });
-          
-          const objects = result?.objects || [];
-          for (const obj of objects) {
-            const typeId = (obj.json?.type_id || obj.json?.fields?.type_id)?.toString();
-            const quantity = obj.json?.quantity || obj.json?.fields?.quantity;
-            if (typeId && ["78437", "78515", "78516", "84868", "88319", "88335"].includes(typeId)) {
-               fuels.push({
-                 id: obj.objectId,
-                 typeId,
-                 quantity: quantity?.toString() || "1"
-               });
-            }
-          }
-          hasMore = result?.hasNextPage || false;
-          nextCursor = result?.nextCursor || null;
-        }
-        setAvailableFuels(fuels);
-        if (fuels.length > 0 && !fuels.find((f: any) => f.id === selectedFuelId)) {
-          setSelectedFuelId(fuels[0].id);
-        }
-      } catch (e) {
-        console.error("Failed to fetch fuels", e);
-      }
-    }
-    fetchFuels();
-  }, [account, suiClient, refreshTrigger]);
+  }, [storageUnitId, selectedFuelId, refreshTrigger]);
 
   const refreshSession = async () => {
     if (!account?.address) return;
@@ -248,6 +204,14 @@ export function PokerTable() {
     setFinalGameResult(null);
 
     try {
+      const targetFuelRecord = availableFuels.find((f: any) => f.id === selectedFuelId);
+      const stakeQty = targetFuelRecord ? Number(targetFuelRecord.quantity) : 1;
+      
+      let actualStake = stakeQty;
+      if (maxStake !== null && actualStake > maxStake) {
+          actualStake = maxStake;
+      }
+
       const txb = new Transaction();
       
       txb.moveCall({
@@ -256,7 +220,8 @@ export function PokerTable() {
           txb.object(configId),
           txb.object(storageUnitId),
           txb.object(characterId),
-          txb.object(selectedFuelId),
+          txb.pure.u64(selectedFuelId),
+          txb.pure.u32(actualStake), // Dynamically stake up to house limit
           txb.object("0x8"), // Random
         ]
       });
@@ -310,7 +275,7 @@ export function PokerTable() {
       }
 
       // Query standard sui RPC for events directly to bypass missing SDK wrapper methods
-      const rpcResponse = await fetch("https://fullnode.testnet.sui.io:443", {
+      const rpcResponse = await fetch(rpcUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -486,12 +451,12 @@ export function PokerTable() {
             </Text>
           ) : !gameSession ? (
             <Box>
-              <Text size="2" color="gray" mb="2" style={{ display: "block", textAlign: "left" }}>Select Stake (Fuel Item):</Text>
+              <Text size="2" color="gray" mb="2" style={{ display: "block", textAlign: "left" }}>Select Stake (Storage Unit Available Fuels):</Text>
               {availableFuels.length > 0 ? (
                 <select value={selectedFuelId} onChange={(e) => setSelectedFuelId(e.target.value)} style={{ width: "100%", padding: "10px", background: "var(--color-background)", color: "var(--color-frontier-orange)", border: "1px solid var(--color-gunmetal)", borderRadius: "0px", fontFamily: "'Space Mono', monospace", outline: "none" }}>
-                  {availableFuels.map(f => (<option key={f.id} value={f.id}>{FUEL_NAMES[f.typeId] || `Unknown Goo`} - {f.quantity} Units</option>))}
+                  {availableFuels.map(f => (<option key={f.id} value={f.id}>{FUEL_NAMES[f.typeId] || `Unknown Goo`} - {f.quantity} Local Units</option>))}
                 </select>
-              ) : (<Text size="2" color="red" style={{ textAlign: "left" }}>No valid Fuel items found in wallet.</Text>)}
+              ) : (<Text size="2" color="red" style={{ textAlign: "left" }}>No valid Fuel items found in the Storage Unit.</Text>)}
             </Box>
           ) : null}
         </Box>

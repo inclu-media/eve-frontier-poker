@@ -6,7 +6,7 @@ use sui::event;
 use world::{
     character::Character,
     storage_unit::StorageUnit,
-    inventory::{Self, Item}
+    inventory::Item
 };
 
 // === Errors ===
@@ -35,7 +35,9 @@ public struct GameSession has key, store {
     player: address,
     storage_unit_id: ID,
     cards: vector<u8>,
-    stake: Item,
+    stake_type: u64,
+    stake_amount: u32,
+    player_stake: Item,
     max_win: Item,
 }
 
@@ -63,6 +65,25 @@ public entry fun fund_house(
         ctx
     );
 }
+
+public entry fun defund_house(
+    _admin_cap: &AdminCap,
+    storage_unit: &mut StorageUnit,
+    character: &Character,
+    type_id: u64,
+    quantity: u32,
+    ctx: &mut TxContext,
+) {
+    let withdrawn_item = world::storage_unit::withdraw_from_open_inventory<XAuth>(
+        storage_unit,
+        character,
+        config::x_auth(),
+        type_id,
+        quantity,
+        ctx
+    );
+    sui::transfer::public_transfer(withdrawn_item, ctx.sender());
+}
 public fun set_poker_config(
     extension_config: &mut ExtensionConfig,
     admin_cap: &AdminCap,
@@ -81,26 +102,36 @@ public entry fun deposit_and_deal(
     extension_config: &ExtensionConfig,
     storage_unit: &mut StorageUnit,
     character: &Character,
-    stake: Item,
+    stake_type: u64,
+    stake_amount: u32,
     r: &Random,
     ctx: &mut TxContext,
 ) {
     assert!(extension_config.has_rule<PokerConfigKey>(PokerConfigKey {}), ENoPokerConfig);
     let poker_cfg = extension_config.borrow_rule<PokerConfigKey, PokerConfig>(PokerConfigKey {});
 
-    assert!(vector::contains(&poker_cfg.allowed_resource_types, &inventory::type_id(&stake)), EInvalidResourceType);
+    assert!(vector::contains(&poker_cfg.allowed_resource_types, &stake_type), EInvalidResourceType);
 
-    let stake_qty = inventory::quantity(&stake);
-    let max_win_qty = stake_qty * MAX_WIN_MULTIPLIER;
+    let max_win_qty = stake_amount * MAX_WIN_MULTIPLIER;
 
-    // Withdraw the max win amount upfront to ensure the private storage can pay out
-    // If it can't, this will abort with EInventoryInsufficientQuantity
-    let max_win = world::storage_unit::withdraw_item<XAuth>(
+    // Withdraw the max win amount upfront from the HOUSE OPEN INVENTORY
+    // If the house is broke, this securely aborts the transaction before dealing
+    let max_win = world::storage_unit::withdraw_from_open_inventory<XAuth>(
         storage_unit,
         character,
         config::x_auth(),
-        inventory::type_id(&stake),
+        stake_type,
         max_win_qty,
+        ctx
+    );
+
+    // Withdraw the player's 1-unit stake upfront from their REGULAR INVENTORY
+    let player_stake = world::storage_unit::withdraw_item<XAuth>(
+        storage_unit,
+        character,
+        config::x_auth(),
+        stake_type,
+        stake_amount,
         ctx
     );
 
@@ -114,7 +145,9 @@ public entry fun deposit_and_deal(
         player: ctx.sender(),
         storage_unit_id: object::id(storage_unit),
         cards,
-        stake,
+        stake_type,
+        stake_amount,
+        player_stake,
         max_win,
     };
 
@@ -155,21 +188,11 @@ public entry fun draw_and_resolve(
 
     let multiplier = evaluate_hand(&eval_cards);
     
-    let GameSession { id, player, storage_unit_id: _, cards: _, stake, max_win } = session;
+    let GameSession { id, player, storage_unit_id: _, cards: _, stake_type, stake_amount, player_stake, max_win } = session;
     id.delete();
     
-    let stake_qty = inventory::quantity(&stake);
-    let stake_type = inventory::type_id(&stake);
-
-    // Deposit everything back to house (private storage)
-    world::storage_unit::deposit_item<XAuth>(
-        storage_unit,
-        character,
-        stake,
-        config::x_auth(),
-        ctx
-    );
-    world::storage_unit::deposit_item<XAuth>(
+    // Deposit the escrowed max_win safely back to the house first
+    world::storage_unit::deposit_to_open_inventory<XAuth>(
         storage_unit,
         character,
         max_win,
@@ -179,31 +202,57 @@ public entry fun draw_and_resolve(
 
     if (multiplier > 0) {
         // Player wins
-        let win_qty = stake_qty * (multiplier as u32);
-        let payout_amount = stake_qty + win_qty;
-        let payout = world::storage_unit::withdraw_item<XAuth>(
+        let win_qty = stake_amount * (multiplier as u32);
+        let payout_amount = stake_amount + win_qty;
+
+        // Player gets their original stake constraint back into their regular array!
+        world::storage_unit::deposit_item<XAuth>(
+            storage_unit,
+            character,
+            player_stake,
+            config::x_auth(),
+            ctx
+        );
+
+        // Fetch the winnings out of the House Open Inventory and send to the Player!
+        let winnings = world::storage_unit::withdraw_from_open_inventory<XAuth>(
             storage_unit,
             character,
             config::x_auth(),
             stake_type,
-            payout_amount,
+            win_qty,
+            ctx
+        );
+        world::storage_unit::deposit_item<XAuth>(
+            storage_unit,
+            character,
+            winnings,
+            config::x_auth(),
             ctx
         );
 
         event::emit(HandResolved {
             player,
             final_cards: eval_cards,
-            stake_amount: (stake_qty as u64),
+            stake_amount: (stake_amount as u64),
             multiplier,
             payout_amount: (payout_amount as u64)
         });
-
-        transfer::public_transfer(payout, player);
     } else {
+        // Player loses.
+        // Deposit their swept stake directly into the house's open inventory!
+        world::storage_unit::deposit_to_open_inventory<XAuth>(
+            storage_unit,
+            character,
+            player_stake,
+            config::x_auth(),
+            ctx
+        );
+
         event::emit(HandResolved {
             player,
             final_cards: eval_cards,
-            stake_amount: (stake_qty as u64),
+            stake_amount: (stake_amount as u64),
             multiplier: 0,
             payout_amount: 0
         });
