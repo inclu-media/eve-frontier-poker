@@ -81,3 +81,11 @@ Once the Smart Assembly is published, environmental variables are synced, and th
    pnpm run dev
    ```
 5. Interface with the app via the configured localhost port, connecting your Sui testnet wallet to play.
+
+## 5. Vercel Deployment
+
+The Poker DApp is configured for automatic deployment via Vercel.
+
+1. **Automatic Deployments:** Because the project is linked to GitHub, Vercel will automatically trigger a new build and deploy the application every time you `git push` to your repository.
+2. **Environment Variables:** For the live web version to function, you MUST configure the Vercel project's Environment Variables (under Project Settings) to match your local `dapps/.env` file. Without defining `VITE_POKER_EXTENSION_CONFIG_ID`, `VITE_STORAGE_UNIT_ID`, `VITE_BUILDER_SCENE_PACKAGE_ID`, and `VITE_SUI_RPC_URL`, the deployed app will not be able to interact with the correct smart contracts or network.
+3. **Live URL:** The production DApp is currently accessible from: [https://eve-frontier-poker-1dvocuqkb-inclu-medias-projects.vercel.app/](https://eve-frontier-poker-1dvocuqkb-inclu-medias-projects.vercel.app/)

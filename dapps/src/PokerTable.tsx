@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Box, Button, Heading, Text } from "@radix-ui/themes";
-import { useCurrentAccount, useCurrentClient, useDAppKit } from "@mysten/dapp-kit-react";
+import { useCurrentClient } from "@mysten/dapp-kit-react";
 import { Transaction } from "@mysten/sui/transactions";
+import { useZkLogin } from "./hooks/useZkLogin";
 
 const SUITS = ["♠", "♥", "♦", "♣"];
 const VALUES = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -22,9 +23,8 @@ function getCardParts(cardVal: number) {
 }
 
 export function PokerTable() {
-  const account = useCurrentAccount();
+  const { zkAddress, isLoggedIn, signAndExecuteZkTx } = useZkLogin();
   const suiClient = useCurrentClient();
-  const { signAndExecuteTransaction } = useDAppKit();
   
   const [gameSession, setGameSession] = useState<any>(null);
   const [heldCards, setHeldCards] = useState<number[]>([]);
@@ -63,9 +63,9 @@ export function PokerTable() {
 
 
   useEffect(() => {
-    if (!account?.address) return;
-    refreshSession(); // Changed from fetchGameSession to refreshSession
-  }, [account]);
+    if (!zkAddress) return;
+    refreshSession();
+  }, [zkAddress]);
 
   useEffect(() => {
     async function fetchStorageData() {
@@ -159,11 +159,11 @@ export function PokerTable() {
   }, [storageUnitId, selectedFuelId, refreshTrigger]);
 
   const refreshSession = async () => {
-    if (!account?.address) return;
+    if (!zkAddress) return;
     try {
       // Get all GameSession objects owned by the player
       const result = await suiClient.core.listOwnedObjects({
-        owner: account.address,
+        owner: zkAddress,
         type: `${pkgId}::poker::GameSession`,
         include: { json: true },
       });
@@ -192,7 +192,7 @@ export function PokerTable() {
   };
 
   const dealCards = async () => {
-    if (!account) return;
+    if (!isLoggedIn) return;
     if (!selectedFuelId) {
       setMessage("ERROR: Please select a fuel item to stake!");
       return;
@@ -225,7 +225,10 @@ export function PokerTable() {
         ]
       });
 
-      await signAndExecuteTransaction({ transaction: txb });
+      txb.setSender(zkAddress!);
+      const txBytes = await txb.build({ client: suiClient });
+      await signAndExecuteZkTx(txBytes);
+
       console.log("Dealt cards");
       refreshSession();
       setLoading(false);
@@ -237,7 +240,7 @@ export function PokerTable() {
   };
 
   const throwCards = async () => {
-    if (!account || !gameSession) return;
+    if (!isLoggedIn || !gameSession) return;
     if (pkgId.length < 60) {
       setMessage("ERROR: Please configure your .env variables first!");
       return;
@@ -261,9 +264,9 @@ export function PokerTable() {
         ]
       });
 
-      const result: any = await signAndExecuteTransaction({ 
-          transaction: txb
-      });
+      txb.setSender(zkAddress!);
+      const txBytes = await txb.build({ client: suiClient });
+      const result: any = await signAndExecuteZkTx(txBytes);
       
       const digest = result.digest || result.effects?.transactionDigest || result.Transaction?.digest;
       
@@ -468,7 +471,7 @@ export function PokerTable() {
         ) : gameSession ? (
           <Button className="eve-glitch-hover" disabled={loading} onClick={throwCards} style={{ width: "100%", background: "var(--color-frontier-orange)", border: "1px solid var(--color-frontier-orange)", color: "#000", cursor: "pointer", fontWeight: "bold" }}>{loading ? "PROCESSING..." : "DRAW & RESOLVE"}</Button>
         ) : (
-          <Button className="eve-glitch-hover" disabled={loading || !account || !selectedFuelId || maxStake === 0} onClick={dealCards} style={{ width: "100%", background: "var(--color-button-background)", border: `1px solid ${maxStake === 0 ? "var(--color-hostile-red)" : "var(--color-frontier-orange)"}`, color: maxStake === 0 ? "var(--color-hostile-red)" : "var(--color-frontier-orange)", cursor: maxStake === 0 ? "not-allowed" : "pointer", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>{loading ? "INITIALIZING..." : !account ? "CONNECT WALLET" : (maxStake === 0 ? "HOUSE FUNDS DEPLETED" : "DEAL STAKE")}</Button>
+          <Button className="eve-glitch-hover" disabled={loading || !isLoggedIn || !selectedFuelId || maxStake === 0} onClick={dealCards} style={{ width: "100%", background: "var(--color-button-background)", border: `1px solid ${maxStake === 0 ? "var(--color-hostile-red)" : "var(--color-frontier-orange)"}`, color: maxStake === 0 ? "var(--color-hostile-red)" : "var(--color-frontier-orange)", cursor: maxStake === 0 ? "not-allowed" : "pointer", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>{loading ? "INITIALIZING..." : !isLoggedIn ? "CONNECT WALLET" : (maxStake === 0 ? "HOUSE FUNDS DEPLETED" : "DEAL STAKE")}</Button>
         )}
       </Box>
     </Box>
