@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { Box, Button, Heading, Text, Grid, Flex } from "@radix-ui/themes";
+import { Box, Button, Heading, Text } from "@radix-ui/themes";
 import { useCurrentAccount, useCurrentClient, useDAppKit } from "@mysten/dapp-kit-react";
 import { Transaction } from "@mysten/sui/transactions";
-import { fetchObjectData } from "./queries";
 
 const SUITS = ["♠", "♥", "♦", "♣"];
 const VALUES = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
@@ -94,7 +93,7 @@ export function PokerTable() {
         combinedBytes.set(idBytes, 0);
         combinedBytes.set(strBytes, idBytes.length);
         const digest = blake2b(combinedBytes, { dkLen: 32 });
-        const openInvKey = "0x" + Array.from(digest).map(b => b.toString(16).padStart(2, '0')).join('');
+        const openInvKey = "0x" + Array.from(digest).map((b: any) => b.toString(16).padStart(2, '0')).join('');
 
         const invKeys = suResponse?.result?.data?.content?.fields?.inventory_keys || [];
         let allFuels: Record<string, number> = {}; 
