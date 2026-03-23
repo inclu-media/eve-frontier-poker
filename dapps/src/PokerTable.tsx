@@ -441,25 +441,29 @@ export function PokerTable() {
                            <Text style={{ fontFamily: "'Space Mono', monospace", color: "var(--color-frontier-orange)", fontWeight: "bold" }}>{f.quantity}</Text>
                            <Button 
                              onClick={async () => {
-                                 const txb = new Transaction();
-                                 txb.moveCall({
-                                     target: `${pkgId}::poker::user_fund_house`,
-                                     arguments: [
-                                         txb.object(configId),
-                                         txb.object(storageUnitId),
-                                         txb.object(characterId),
-                                         txb.pure.u64(f.typeId),
-                                         txb.pure.u32(f.quantity)
-                                     ]
-                                 });
-                                 if (isZkLoggedIn) {
-                                     txb.setSender(activeAddress!);
-                                     const txBytes = await txb.build({ client: suiClient });
-                                     await signAndExecuteZkTx(txBytes);
-                                 } else {
-                                     await signAndExecuteTransaction({ transaction: txb });
+                                 try {
+                                     const txb = new Transaction();
+                                     txb.moveCall({
+                                         target: `${pkgId}::poker::user_fund_house`,
+                                         arguments: [
+                                             txb.object(configId),
+                                             txb.object(storageUnitId),
+                                             txb.object(characterId),
+                                             txb.pure.u64(f.typeId),
+                                             txb.pure.u32(f.quantity)
+                                         ]
+                                     });
+                                     if (isZkLoggedIn) {
+                                         txb.setSender(activeAddress!);
+                                         const txBytes = await txb.build({ client: suiClient });
+                                         await signAndExecuteZkTx(txBytes);
+                                     } else {
+                                         await signAndExecuteTransaction({ transaction: txb });
+                                     }
+                                     setRefreshTrigger(prev => prev + 1);
+                                 } catch (e: any) {
+                                     window.alert("FUND HOUSE ERROR: " + (e?.message || String(e)));
                                  }
-                                 setRefreshTrigger(prev => prev + 1);
                              }}
                              style={{ background: "var(--color-gunmetal)", padding: "2px 8px", cursor: "pointer", fontSize: "10px" }}
                            >FUND HOUSE</Button>
