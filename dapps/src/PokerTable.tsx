@@ -74,7 +74,9 @@ export function PokerTable() {
 
   const pkgId = import.meta.env.VITE_BUILDER_SCENE_PACKAGE_ID || "0x123";
   const configId = import.meta.env.VITE_POKER_EXTENSION_CONFIG_ID || "0x123";
-  const storageUnitId = assembly?.id || import.meta.env.VITE_STORAGE_UNIT_ID || "0x123";
+  
+  // Exclusively use context variables instead of .env so we don't fetch ghost data
+  const storageUnitId = assembly?.id;
   const characterId = charInfo?.characterId?.toString() || charInfo?.id || import.meta.env.VITE_CHARACTER_ID || "0x123";
   const rpcUrl = import.meta.env.VITE_SUI_RPC_URL || "https://fullnode.testnet.sui.io:443";
 
@@ -458,6 +460,16 @@ export function PokerTable() {
         )}
 
         <Box style={{ position: "absolute", bottom: "12px", right: "20px", textAlign: "right", zIndex: 1 }}>
+          {smartObject.loading && (
+            <Text className="eve-flicker" size="1" style={{ color: "var(--color-matrix-green)", fontFamily: "'Space Mono', monospace", display: "block", marginBottom: "4px" }}>
+              SYNCING WITH GRAPHQL...
+            </Text>
+          )}
+          {!smartObject.loading && !assembly?.id && (
+            <Text className="eve-flicker" size="1" style={{ color: "var(--color-hostile-red)", fontFamily: "'Space Mono', monospace", display: "block", marginBottom: "4px" }}>
+              ERR: ASSEMBLY CONTEXT LOST
+            </Text>
+          )}
           {maxStake !== null && (
             <Text 
               className="eve-flicker"
