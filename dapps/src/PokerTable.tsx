@@ -45,7 +45,6 @@ export function PokerTable() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dynamicCharId, setDynamicCharId] = useState<string | null>(null);
   
-  const [storageOwner, setStorageOwner] = useState<string | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
   const [houseFuelsList, setHouseFuelsList] = useState<any[]>([]);
   const [regularFuelsList, setRegularFuelsList] = useState<any[]>([]);
@@ -101,12 +100,13 @@ export function PokerTable() {
         const charRes = await fetch(rpcUrl, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            query: `query GetChars($owner: SuiAddress!) { address(address: $owner) { objects(filter: { type: "${import.meta.env.VITE_EVE_WORLD_PACKAGE_ID}::character::Character" }) { nodes { address } } } }`,
+            query: `query GetWalletChars($owner: SuiAddress!) { address(address: $owner) { objects(last: 1, filter: { type: "0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75::character::PlayerProfile" }) { nodes { contents { extract(path: "character_id") { asAddress { asObject { asMoveObject { contents { json } } } } } } } } } }`,
             variables: { owner: activeAddress }
           })
         }).then(r => r.json());
         const node = charRes?.data?.address?.objects?.nodes?.[0];
-        if (node) setDynamicCharId(node.address);
+        const extractedCharIdFromJson = node?.contents?.extract?.asAddress?.asObject?.asMoveObject?.contents?.json?.id;
+        if (extractedCharIdFromJson) setDynamicCharId(extractedCharIdFromJson);
       } catch (e) { console.error(e); }
     }
     fetchDynamicChar();
@@ -127,13 +127,10 @@ export function PokerTable() {
         
         const charPromise = fetch(rpcUrl, {
               method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sui_getObject", params: [import.meta.env.VITE_CHARACTER_ID, { showContent: true }] })
+              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sui_getObject", params: [characterId, { showContent: true }] })
         }).then(r => r.json());
 
-        const [suResponse, charResponse] = await Promise.all([suPromise, charPromise]);
-        
-        const suOwner = charResponse?.result?.data?.content?.fields?.character_address;
-        setStorageOwner(suOwner || null);
+        const [suResponse] = await Promise.all([suPromise]);
         
         // Import lightweight hash on the fly since we are inside a React component
         const blake2b = (await import('@noble/hashes/blake2b')).blake2b;
@@ -499,7 +496,7 @@ export function PokerTable() {
         <Heading size="6" style={{ letterSpacing: "4px", textTransform: "uppercase", color: "var(--color-frontier-orange)", position: "relative", zIndex: 1 }}>BURN :: RATE</Heading>
         <Text size="2" style={{ letterSpacing: "2px", textTransform: "uppercase", color: "var(--color-text-muted)", position: "relative", zIndex: 1, display: "block", marginTop: "4px" }}>Fuel Poker</Text>
         
-        {storageOwner && activeAddress && storageOwner === activeAddress && (
+        {isLoggedIn && activeAddress && (
              <Button 
                onClick={() => setAdminOpen(true)}
                variant="ghost"
