@@ -82,9 +82,14 @@ export function PokerTable() {
   // Use context variables if available, otherwise securely fallback to URL params, then .env for explicit testing overrides
   const isEnvFallback = !assembly?.id && !getParam("smartObjectId") && !getParam("itemId");
   const extractedStorageId = assembly?.id || getParam("itemId") || getParam("smartObjectId") || getParam("storageUnitId") || getParam("objectId");
-  const storageUnitId = extractedStorageId || import.meta.env.VITE_STORAGE_UNIT_ID || "0x123";
-  const extractedCharId = charInfo?.characterId?.toString() || charInfo?.id || getParam("characterId") || getParam("playerId");
-  const characterId = extractedCharId || dynamicCharId || import.meta.env.VITE_CHARACTER_ID || "0x554a600673c698d91b680336f3a513ddf4c3e623dfb82cfb37a93f1e9a06a1b2";
+  const storageUnitId = extractedStorageId || import.meta.env.VITE_STORAGE_UNIT_ID || "0x6545247aa7cfeb5b3bc4b694f5d0390d90d2276427520c615c11ac1dd9e15ab9";
+  
+  // Safely extract the Character ID, explicitly preventing the wallet address from leaking in.
+  let validCharId = charInfo?.characterId?.toString() || getParam("characterId") || dynamicCharId;
+  if (!validCharId || validCharId === activeAddress || validCharId === "0x123") {
+      validCharId = "0x554a600673c698d91b680336f3a513ddf4c3e623dfb82cfb37a93f1e9a06a1b2"; // Final static catch-all for Utopia
+  }
+  const characterId = validCharId;
   const rpcUrl = import.meta.env.VITE_SUI_RPC_URL || "https://fullnode.testnet.sui.io:443";
 
 
