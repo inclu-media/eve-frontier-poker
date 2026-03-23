@@ -31,18 +31,23 @@ async function main() {
 
         const MODULES = { CHARACTER: "character", STORAGE_UNIT: "storage_unit" };
 
-        const characterId = deriveObjectId(config.objectRegistry, BigInt(GAME_CHARACTER_ID), config.packageId);
-        const storageUnitId = deriveObjectId(config.objectRegistry, BigInt(STORAGE_A_ITEM_ID), config.packageId);
+        // Derive local testnet objects for minting (where PLAYER_A has the OwnerCap)
+        const characterIdLocal = deriveObjectId(config.objectRegistry, BigInt(GAME_CHARACTER_ID), config.packageId);
+        const storageUnitIdLocal = deriveObjectId(config.objectRegistry, BigInt(STORAGE_A_ITEM_ID), config.packageId);
+
+        // Explicit target for funding context (Utopia live objects)
+        const targetStorageUnitId = process.env.VITE_STORAGE_UNIT_ID || process.env.STORAGE_UNIT_ID || storageUnitIdLocal;
+        const targetCharacterId = characterIdLocal;
 
         const storageUnitOwnerCapId = await getStorageUnitOwnerCap(
-            storageUnitId,
+            storageUnitIdLocal,
             playerCtx.client,
             config,
             playerCtx.address
         );
 
         if (!storageUnitOwnerCapId) {
-            throw new Error(`OwnerCap not found for storage unit ${storageUnitId}`);
+            throw new Error(`OwnerCap not found for local storage unit ${storageUnitIdLocal}`);
         }
 
         console.log("-> Minting 100,000 units of All 6 Fuel types to use as House Liquidity...");
@@ -57,7 +62,7 @@ async function main() {
         let [ownerCapMint, receiptMint] = txMint.moveCall({
             target: `${config.packageId}::${MODULES.CHARACTER}::borrow_owner_cap`,
             typeArguments: [`${config.packageId}::${MODULES.STORAGE_UNIT}::StorageUnit`],
-            arguments: [txMint.object(characterId), txMint.object(storageUnitOwnerCapId)],
+            arguments: [txMint.object(characterIdLocal), txMint.object(storageUnitOwnerCapId)],
         });
 
         // Testnet Fuel Type IDs configured for Poker
@@ -69,9 +74,9 @@ async function main() {
                 target: `${config.packageId}::${MODULES.STORAGE_UNIT}::game_item_to_chain_inventory`,
                 typeArguments: [`${config.packageId}::${MODULES.STORAGE_UNIT}::StorageUnit`],
                 arguments: [
-                    txMint.object(storageUnitId),
+                    txMint.object(storageUnitIdLocal),
                     txMint.object(config.adminAcl),
-                    txMint.object(characterId),
+                    txMint.object(characterIdLocal),
                     ownerCapMint,
                     txMint.pure.u64(BigInt(Date.now() + i)), // random unique item ID for the stack
                     txMint.pure.u64(fuelTypeIds[i]), // type_id (fuel)
@@ -84,8 +89,8 @@ async function main() {
                 target: `${config.packageId}::${MODULES.STORAGE_UNIT}::withdraw_by_owner`,
                 typeArguments: [`${config.packageId}::${MODULES.STORAGE_UNIT}::StorageUnit`],
                 arguments: [
-                    txMint.object(storageUnitId),
-                    txMint.object(characterId),
+                    txMint.object(storageUnitIdLocal),
+                    txMint.object(characterIdLocal),
                     ownerCapMint,
                     txMint.pure.u64(fuelTypeIds[i]), // type_id
                     txMint.pure.u32(100000), // withdraw 100,000 for the house
@@ -97,7 +102,7 @@ async function main() {
         txMint.moveCall({
             target: `${config.packageId}::${MODULES.CHARACTER}::return_owner_cap`,
             typeArguments: [`${config.packageId}::${MODULES.STORAGE_UNIT}::StorageUnit`],
-            arguments: [txMint.object(characterId), ownerCapMint, receiptMint],
+            arguments: [txMint.object(characterIdLocal), ownerCapMint, receiptMint],
         });
 
         // TRICK: We transfer the withdrawn items to the ADMIN ADDRESS so the admin can call fund_house
@@ -135,8 +140,8 @@ async function main() {
                 target: `${builderPackageId}::poker::fund_house`,
                 arguments: [
                     txFund.object(adminCapId),
-                    txFund.object(storageUnitId),
-                    txFund.object(characterId),
+                    txFund.object(targetStorageUnitId),
+                    txFund.object(targetCharacterId),
                     txFund.object((itemObj as any).objectId),
                 ],
             });
