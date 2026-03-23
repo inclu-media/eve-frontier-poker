@@ -3,7 +3,7 @@ import { ConnectButton } from "@mysten/dapp-kit-react";
 import { PokerTable } from "./PokerTable";
 import { useZkLogin } from "./hooks/useZkLogin";
 
-const OAUTH_CLIENT_ID = import.meta.env.VITE_EVE_OAUTH_CLIENT_ID;
+const OAUTH_CLIENT_ID = import.meta.env.VITE_EVE_OAUTH_CLIENT_ID || "00d3ce5b-4cab-4970-a9dc-e122fc1d30ce";
 
 function App() {
   const { isLoggedIn, zkAddress, beginLogin, logout, loadingAuth } = useZkLogin();

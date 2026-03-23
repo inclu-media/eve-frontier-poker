@@ -3,6 +3,7 @@ import { Box, Button, Heading, Text, Flex } from "@radix-ui/themes";
 import { GearIcon } from "@radix-ui/react-icons";
 import { useCurrentAccount, useCurrentClient, useDAppKit } from "@mysten/dapp-kit-react";
 import { Transaction } from "@mysten/sui/transactions";
+import { useSmartObject } from "@evefrontier/dapp-kit";
 import { useZkLogin } from "./hooks/useZkLogin";
 
 const SUITS = ["♠", "♥", "♦", "♣"];
@@ -41,6 +42,7 @@ export function PokerTable() {
   const [selectedFuelId, setSelectedFuelId] = useState<string>("");
   const [finalGameResult, setFinalGameResult] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
   const [storageOwner, setStorageOwner] = useState<string | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -50,6 +52,10 @@ export function PokerTable() {
   const targetFuelRecord = availableFuels.find(f => f.id === selectedFuelId);
   const currentTargetTypeId = targetFuelRecord ? targetFuelRecord.typeId?.toString() : "78437";
   const fuelName = FUEL_NAMES[currentTargetTypeId] || "Unknown Fuel";
+
+  const smartObject = useSmartObject() as any;
+  const assembly = smartObject.assembly;
+  const charInfo = smartObject.character || smartObject.assemblyOwner;
 
   const getHandName = (multiplier: number) => {
     switch (Number(multiplier)) {
@@ -68,8 +74,8 @@ export function PokerTable() {
 
   const pkgId = import.meta.env.VITE_BUILDER_SCENE_PACKAGE_ID || "0x123";
   const configId = import.meta.env.VITE_POKER_EXTENSION_CONFIG_ID || "0x123";
-  const storageUnitId = import.meta.env.VITE_STORAGE_UNIT_ID || "0x123";
-  const characterId = import.meta.env.VITE_CHARACTER_ID || "0x123";
+  const storageUnitId = assembly?.id || import.meta.env.VITE_STORAGE_UNIT_ID || "0x123";
+  const characterId = charInfo?.characterId?.toString() || charInfo?.id || import.meta.env.VITE_CHARACTER_ID || "0x123";
   const rpcUrl = import.meta.env.VITE_SUI_RPC_URL || "https://fullnode.testnet.sui.io:443";
 
 
@@ -536,9 +542,29 @@ export function PokerTable() {
             <Box>
               <Text size="2" color="gray" mb="2" style={{ display: "block", textAlign: "left" }}>Select Stake (Storage Unit Available Fuels):</Text>
               {availableFuels.length > 0 ? (
-                <select value={selectedFuelId} onChange={(e) => setSelectedFuelId(e.target.value)} style={{ width: "100%", padding: "10px", background: "var(--color-background)", color: "var(--color-frontier-orange)", border: "1px solid var(--color-gunmetal)", borderRadius: "0px", fontFamily: "'Space Mono', monospace", outline: "none" }}>
-                  {availableFuels.map(f => (<option key={f.id} value={f.id}>{FUEL_NAMES[f.typeId] || `Unknown Goo`} - {f.quantity} Local Units</option>))}
-                </select>
+                <Box style={{ position: "relative", width: "100%", zIndex: 50 }}>
+                  <Box 
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    style={{ padding: "10px", background: "var(--color-background)", color: "var(--color-frontier-orange)", border: "1px solid var(--color-gunmetal)", cursor: "pointer", display: "flex", justifyContent: "space-between", fontFamily: "'Space Mono', monospace" }}
+                  >
+                    <Text>{availableFuels.find(f => f.id === selectedFuelId) ? `${FUEL_NAMES[availableFuels.find(f => f.id === selectedFuelId)!.typeId] || "Unknown"} - ${availableFuels.find(f => f.id === selectedFuelId)!.quantity} Local Units` : "Select Fuel"}</Text>
+                    <Text>▼</Text>
+                  </Box>
+                  {isDropdownOpen && (
+                    <Box style={{ position: "absolute", bottom: "100%", left: 0, right: 0, background: "var(--color-background)", border: "1px solid var(--color-frontier-orange)", zIndex: 100, maxHeight: "150px", overflowY: "auto", boxShadow: "0 -2px 10px rgba(0,0,0,0.8)" }}>
+                      {availableFuels.map(f => (
+                        <Box 
+                          key={f.id}
+                          onClick={() => { setSelectedFuelId(f.id); setIsDropdownOpen(false); }}
+                          style={{ padding: "10px", cursor: "pointer", color: "var(--color-frontier-orange)", borderBottom: "1px solid var(--color-gunmetal)", fontFamily: "'Space Mono', monospace" }}
+                          className="eve-glitch-hover"
+                        >
+                          {FUEL_NAMES[f.typeId] || "Unknown"} - {f.quantity} Local Units
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
               ) : (<Text size="2" color="red" style={{ textAlign: "left" }}>No valid Fuel items found in the Storage Unit.</Text>)}
             </Box>
           ) : null}
