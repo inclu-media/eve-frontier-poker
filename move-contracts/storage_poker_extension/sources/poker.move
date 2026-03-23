@@ -66,6 +66,37 @@ public entry fun fund_house(
     );
 }
 
+// Gives players the ability to transfer fuel securely from their local inventory into the open house inventory
+public entry fun user_fund_house(
+    extension_config: &ExtensionConfig,
+    storage_unit: &mut StorageUnit,
+    character: &Character,
+    stake_type: u64,
+    stake_amount: u32,
+    ctx: &mut TxContext,
+) {
+    assert!(extension_config.has_rule<PokerConfigKey>(PokerConfigKey {}), ENoPokerConfig);
+    let poker_cfg = extension_config.borrow_rule<PokerConfigKey, PokerConfig>(PokerConfigKey {});
+    assert!(vector::contains(&poker_cfg.allowed_resource_types, &stake_type), EInvalidResourceType);
+
+    let item = world::storage_unit::withdraw_item<XAuth>(
+        storage_unit,
+        character,
+        config::x_auth(),
+        stake_type,
+        stake_amount,
+        ctx
+    );
+
+    world::storage_unit::deposit_to_open_inventory<XAuth>(
+        storage_unit,
+        character,
+        item,
+        config::x_auth(),
+        ctx
+    );
+}
+
 public entry fun defund_house(
     _admin_cap: &AdminCap,
     storage_unit: &mut StorageUnit,

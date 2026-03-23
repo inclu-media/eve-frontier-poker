@@ -43,6 +43,7 @@ export function PokerTable() {
   const [finalGameResult, setFinalGameResult] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dynamicCharId, setDynamicCharId] = useState<string | null>(null);
   
   const [storageOwner, setStorageOwner] = useState<string | null>(null);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -84,7 +85,7 @@ export function PokerTable() {
   const extractedStorageId = assembly?.id || getParam("itemId") || getParam("smartObjectId") || getParam("storageUnitId") || getParam("objectId");
   const storageUnitId = extractedStorageId || import.meta.env.VITE_STORAGE_UNIT_ID || "0x123";
   const extractedCharId = charInfo?.characterId?.toString() || charInfo?.id || getParam("characterId") || getParam("playerId");
-  const characterId = extractedCharId || import.meta.env.VITE_CHARACTER_ID || "0x123";
+  const characterId = extractedCharId || dynamicCharId || import.meta.env.VITE_CHARACTER_ID || "0x123";
   const rpcUrl = import.meta.env.VITE_SUI_RPC_URL || "https://fullnode.testnet.sui.io:443";
 
 
@@ -92,6 +93,24 @@ export function PokerTable() {
     if (!activeAddress) return;
     refreshSession();
   }, [activeAddress]);
+
+  useEffect(() => {
+    async function fetchDynamicChar() {
+      if (!isLoggedIn || !activeAddress) return;
+      try {
+        const charRes = await fetch(rpcUrl, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: `query GetChars($owner: SuiAddress!) { address(address: $owner) { objects(filter: { type: "${import.meta.env.VITE_EVE_WORLD_PACKAGE_ID}::character::Character" }) { nodes { address } } } }`,
+            variables: { owner: activeAddress }
+          })
+        }).then(r => r.json());
+        const node = charRes?.data?.address?.objects?.nodes?.[0];
+        if (node) setDynamicCharId(node.address);
+      } catch (e) { console.error(e); }
+    }
+    fetchDynamicChar();
+  }, [activeAddress, isLoggedIn]);
 
   useEffect(() => {
     async function fetchStorageData() {
@@ -424,14 +443,38 @@ export function PokerTable() {
            <Box mb="5">
                <Heading size="3" style={{ color: "var(--color-frontier-orange)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>Player Regular Storage</Heading>
                {regularFuelsList.length > 0 ? regularFuelsList.map(f => (
-                   <Flex key={f.id} justify="between" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
+                   <Flex key={f.id} justify="between" align="center" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
                        <Text style={{ fontFamily: "'Space Mono', monospace", color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
-                       <Text style={{ fontFamily: "'Space Mono', monospace", color: "var(--color-frontier-orange)", fontWeight: "bold" }}>{f.quantity}</Text>
+                       <Flex align="center" gap="3">
+                           <Text style={{ fontFamily: "'Space Mono', monospace", color: "var(--color-frontier-orange)", fontWeight: "bold" }}>{f.quantity}</Text>
+                           <Button 
+                             onClick={async () => {
+                                 const txb = new Transaction();
+                                 txb.moveCall({
+                                     target: `${pkgId}::poker::user_fund_house`,
+                                     arguments: [
+                                         txb.object(configId),
+                                         txb.object(storageUnitId),
+                                         txb.object(characterId),
+                                         txb.pure.u64(f.typeId),
+                                         txb.pure.u32(f.quantity)
+                                     ]
+                                 });
+                                 if (isZkLoggedIn) {
+                                     txb.setSender(activeAddress!);
+                                     const txBytes = await txb.build({ client: suiClient });
+                                     await signAndExecuteZkTx(txBytes);
+                                 } else {
+                                     await signAndExecuteTransaction({ transaction: txb });
+                                 }
+                                 setRefreshTrigger(prev => prev + 1);
+                             }}
+                             style={{ background: "var(--color-gunmetal)", padding: "2px 8px", cursor: "pointer", fontSize: "10px" }}
+                           >FUND HOUSE</Button>
+                       </Flex>
                    </Flex>
                )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No available fuel stakes.</Text>}
            </Box>
-           
-           <Text style={{ display: "block", marginTop: "30px", color: "var(--color-text-muted)", fontSize: "11px", fontStyle: "italic", textAlign: "center" }}>* Fuel transfer functionality mapping to Move PTBs coming soon.</Text>
         </Box>
       )}
 
