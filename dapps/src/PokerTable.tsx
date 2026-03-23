@@ -125,11 +125,6 @@ export function PokerTable() {
               body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sui_getObject", params: [storageUnitId, { showContent: true }] })
         }).then(r => r.json());
         
-        const charPromise = fetch(rpcUrl, {
-              method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sui_getObject", params: [characterId, { showContent: true }] })
-        }).then(r => r.json());
-
         const [suResponse] = await Promise.all([suPromise]);
         
         // Import lightweight hash on the fly since we are inside a React component
