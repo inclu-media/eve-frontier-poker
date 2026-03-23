@@ -10,7 +10,7 @@ function App() {
 
   return (
     <Box style={{ background: "#050505", minHeight: "100vh", color: "#e0e0e0", position: "relative" }}>
-      <Box style={{ position: "absolute", top: "20px", right: "20px", zIndex: 100 }}>
+      <Box style={{ position: "absolute", top: "20px", left: "20px", zIndex: 100 }}>
         {OAUTH_CLIENT_ID ? (
           isLoggedIn ? (
             <Button 

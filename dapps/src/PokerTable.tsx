@@ -508,7 +508,7 @@ export function PokerTable() {
             </Text>
           ) : (
             <Text className="eve-flicker" size="1" style={{ color: isEnvFallback ? "var(--color-hostile-red)" : "var(--color-frontier-orange)", fontFamily: "'Space Mono', monospace", display: "block", marginBottom: "4px" }}>
-              SYS {">"} ASS: {storageUnitId.substring(0,6)}...{storageUnitId.substring(storageUnitId.length-4)} | CHR: {(characterId || "none").substring(0,6)}...
+              ASS: {storageUnitId.substring(0,8)} | Q: {typeof window !== 'undefined' ? window.location.search || "none" : "none"}
             </Text>
           )}
           {maxStake !== null && (
