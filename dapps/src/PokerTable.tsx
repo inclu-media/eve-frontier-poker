@@ -75,10 +75,16 @@ export function PokerTable() {
   const pkgId = import.meta.env.VITE_BUILDER_SCENE_PACKAGE_ID || "0x123";
   const configId = import.meta.env.VITE_POKER_EXTENSION_CONFIG_ID || "0x123";
   
-  // Use context variables if available, otherwise securely fallback to .env for explicit testing overrides
-  const isEnvFallback = !assembly?.id;
-  const storageUnitId = assembly?.id || import.meta.env.VITE_STORAGE_UNIT_ID || "0x123";
-  const characterId = charInfo?.characterId?.toString() || charInfo?.id || import.meta.env.VITE_CHARACTER_ID || "0x123";
+  // URL parameters as fundamental foolproof fallback
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new Map();
+  const getParam = (k: string) => urlParams.get(k) || null;
+
+  // Use context variables if available, otherwise securely fallback to URL params, then .env for explicit testing overrides
+  const isEnvFallback = !assembly?.id && !getParam("smartObjectId");
+  const extractedStorageId = assembly?.id || getParam("smartObjectId") || getParam("storageUnitId") || getParam("objectId");
+  const storageUnitId = extractedStorageId || import.meta.env.VITE_STORAGE_UNIT_ID || "0x123";
+  const extractedCharId = charInfo?.characterId?.toString() || charInfo?.id || getParam("characterId") || getParam("playerId");
+  const characterId = extractedCharId || import.meta.env.VITE_CHARACTER_ID || "0x123";
   const rpcUrl = import.meta.env.VITE_SUI_RPC_URL || "https://fullnode.testnet.sui.io:443";
 
 
@@ -461,14 +467,13 @@ export function PokerTable() {
         )}
 
         <Box style={{ position: "absolute", bottom: "12px", right: "20px", textAlign: "right", zIndex: 1 }}>
-          {smartObject.loading && (
+          {smartObject.loading ? (
             <Text className="eve-flicker" size="1" style={{ color: "var(--color-matrix-green)", fontFamily: "'Space Mono', monospace", display: "block", marginBottom: "4px" }}>
               SYNCING WITH GRAPHQL...
             </Text>
-          )}
-          {!smartObject.loading && isEnvFallback && (
-            <Text className="eve-flicker" size="1" style={{ color: "var(--color-frontier-orange)", fontFamily: "'Space Mono', monospace", display: "block", marginBottom: "4px" }}>
-              SYS {">"} USING .ENV STORAGE OVERRIDE
+          ) : (
+            <Text className="eve-flicker" size="1" style={{ color: isEnvFallback ? "var(--color-hostile-red)" : "var(--color-frontier-orange)", fontFamily: "'Space Mono', monospace", display: "block", marginBottom: "4px" }}>
+              SYS {">"} ASS: {storageUnitId.substring(0,6)}...{storageUnitId.substring(storageUnitId.length-4)} | CHR: {(characterId || "none").substring(0,6)}...
             </Text>
           )}
           {maxStake !== null && (
