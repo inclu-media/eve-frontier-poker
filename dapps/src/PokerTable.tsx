@@ -84,7 +84,7 @@ export function PokerTable() {
   const extractedStorageId = assembly?.id || getParam("itemId") || getParam("smartObjectId") || getParam("storageUnitId") || getParam("objectId");
   const storageUnitId = extractedStorageId || import.meta.env.VITE_STORAGE_UNIT_ID || "0x123";
   const extractedCharId = charInfo?.characterId?.toString() || charInfo?.id || getParam("characterId") || getParam("playerId");
-  const characterId = extractedCharId || dynamicCharId || import.meta.env.VITE_CHARACTER_ID || "0x123";
+  const characterId = extractedCharId || dynamicCharId || import.meta.env.VITE_CHARACTER_ID || "0x554a600673c698d91b680336f3a513ddf4c3e623dfb82cfb37a93f1e9a06a1b2";
   const rpcUrl = import.meta.env.VITE_SUI_RPC_URL || "https://fullnode.testnet.sui.io:443";
 
 
@@ -462,7 +462,8 @@ export function PokerTable() {
                                      }
                                      setRefreshTrigger(prev => prev + 1);
                                  } catch (e: any) {
-                                     window.alert("FUND HOUSE ERROR: " + (e?.message || String(e)));
+                                     setMessage("FUND ERROR: " + (e?.message || String(e)));
+                                     setAdminOpen(false); // Close the overlay so they can see the message
                                  }
                              }}
                              style={{ background: "var(--color-gunmetal)", padding: "2px 8px", cursor: "pointer", fontSize: "10px" }}
