@@ -80,8 +80,8 @@ export function PokerTable() {
   const getParam = (k: string) => urlParams.get(k) || null;
 
   // Use context variables if available, otherwise securely fallback to URL params, then .env for explicit testing overrides
-  const isEnvFallback = !assembly?.id && !getParam("smartObjectId");
-  const extractedStorageId = assembly?.id || getParam("smartObjectId") || getParam("storageUnitId") || getParam("objectId");
+  const isEnvFallback = !assembly?.id && !getParam("smartObjectId") && !getParam("itemId");
+  const extractedStorageId = assembly?.id || getParam("itemId") || getParam("smartObjectId") || getParam("storageUnitId") || getParam("objectId");
   const storageUnitId = extractedStorageId || import.meta.env.VITE_STORAGE_UNIT_ID || "0x123";
   const extractedCharId = charInfo?.characterId?.toString() || charInfo?.id || getParam("characterId") || getParam("playerId");
   const characterId = extractedCharId || import.meta.env.VITE_CHARACTER_ID || "0x123";
