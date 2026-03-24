@@ -422,11 +422,9 @@ export function PokerTable() {
   };
 
   return (
-    <Box className="eve-terminal poker-container eve-panel" p="6" style={{
+    <Box className="eve-terminal poker-container eve-panel" style={{
       fontFamily: "'Space Mono', monospace",
-      maxWidth: "500px",
-      margin: "0 auto",
-      boxShadow: "0 0 15px var(--color-orange-glow)",
+      width: "100%",
       position: "relative"
     }}>
       {/* ADMIN OVERLAY MASK - Disabled */}
@@ -538,11 +536,15 @@ export function PokerTable() {
 
         {/* TOP: Result Section (Always 32px or empty) */}
         <Box style={{ minHeight: "42px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-          {finalGameResult && (
+          {finalGameResult ? (
             <Text size="3" style={{ color: "var(--color-text-muted)" }}>
               Result: <b style={{ color: "var(--color-frontier-orange)" }}>{getHandName(Number(finalGameResult.multiplier))}</b>
             </Text>
-          )}
+          ) : gameSession ? (
+            <Text size="2" style={{ color: "var(--color-matrix-green)", textTransform: "uppercase", letterSpacing: "1px", fontStyle: "italic" }}>
+              [SELECT CARDS TO RETAIN]
+            </Text>
+          ) : null}
         </Box>
 
         {/* MIDDLE: Cards Section (Always 120px) */}
