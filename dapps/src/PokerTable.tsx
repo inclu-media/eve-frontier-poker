@@ -29,10 +29,10 @@ export function PokerTable() {
   const { signAndExecuteTransaction } = useDAppKit();
   const { zkAddress, isLoggedIn: isZkLoggedIn, signAndExecuteZkTx } = useZkLogin();
   const suiClient = useCurrentClient();
-  
+
   const activeAddress = isZkLoggedIn ? zkAddress : walletAccount?.address;
   const isLoggedIn = isZkLoggedIn || !!walletAccount;
-  
+
   const [gameSession, setGameSession] = useState<any>(null);
   const [heldCards, setHeldCards] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,7 +44,7 @@ export function PokerTable() {
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dynamicCharId, setDynamicCharId] = useState<string | null>(null);
-  
+
   // adminOpen state removed because it is no longer used
   const [houseFuelsList, setHouseFuelsList] = useState<any[]>([]);
   const [regularFuelsList, setRegularFuelsList] = useState<any[]>([]);
@@ -83,16 +83,16 @@ export function PokerTable() {
   const isEnvFallback = !assembly?.id && !getParam("smartObjectId") && !getParam("itemId");
   const extractedStorageId = assembly?.id || getParam("itemId") || getParam("smartObjectId") || getParam("storageUnitId") || getParam("objectId");
   const storageUnitId = extractedStorageId || import.meta.env.VITE_STORAGE_UNIT_ID || "0x6545247aa7cfeb5b3bc4b694f5d0390d90d2276427520c615c11ac1dd9e15ab9";
-  
+
   // Safely extract the Character ID, explicitly preventing the wallet address from leaking in.
   let validCharId = charInfo?.characterId?.toString() || getParam("characterId") || dynamicCharId || import.meta.env.VITE_CHARACTER_ID;
   if (!validCharId || validCharId === activeAddress || validCharId === "0x123") {
-      validCharId = "0x085622495bf81cad9e3e5c3a97985a0685328b64b0b379aaf893bfa201cbb5ed"; // Final static catch-all for Utopia
+    validCharId = "0xe567db3290f7a924a9b585537dff30723564b591a46a6032478ac9bdb7b1f4d9"; // Final static catch-all for Utopia
   }
   const characterId = validCharId;
   const isOwner = Boolean(
-      (activeAddress && smartObject.assemblyOwner && (charInfo?.characterId === smartObject.assemblyOwner.characterId)) ||
-      (activeAddress && isEnvFallback)
+    (activeAddress && smartObject.assemblyOwner && (charInfo?.characterId === smartObject.assemblyOwner.characterId)) ||
+    (activeAddress && isEnvFallback)
   );
   const rpcUrl = import.meta.env.VITE_SUI_RPC_URL || "https://fullnode.testnet.sui.io:443";
 
@@ -124,25 +124,25 @@ export function PokerTable() {
   useEffect(() => {
     async function fetchStorageData() {
       if (!storageUnitId || storageUnitId === "0x123") {
-          setMaxStake(0);
-          setAvailableFuels([]);
-          return;
+        setMaxStake(0);
+        setAvailableFuels([]);
+        return;
       }
       try {
         const suPromise = fetch(rpcUrl, {
-              method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sui_getObject", params: [storageUnitId, { showContent: true }] })
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "sui_getObject", params: [storageUnitId, { showContent: true }] })
         }).then(r => r.json());
-        
+
         const [suResponse] = await Promise.all([suPromise]);
-        
+
         // Import lightweight hash on the fly since we are inside a React component
         const blake2b = (await import('@noble/hashes/blake2b')).blake2b;
 
         const idBytes = new Uint8Array(32);
         const hex = storageUnitId.replace('0x', '');
         for (let i = 0; i < 32; i++) {
-            idBytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+          idBytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
         }
         const strBytes = new TextEncoder().encode("open_inventory");
         const combinedBytes = new Uint8Array(idBytes.length + strBytes.length);
@@ -152,71 +152,71 @@ export function PokerTable() {
         const openInvKey = "0x" + Array.from(digest).map((b: any) => b.toString(16).padStart(2, '0')).join('');
 
         const invKeys = suResponse?.result?.data?.content?.fields?.inventory_keys || [];
-        let allFuels: Record<string, number> = {}; 
+        let allFuels: Record<string, number> = {};
         let houseFuels: Record<string, number> = {};
-        
+
         for (const iterInvKey of invKeys) {
-            const dynResponse = await fetch(rpcUrl, {
-                method: "POST", headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "suix_getDynamicFieldObject", params: [storageUnitId, { type: "0x2::object::ID", value: iterInvKey }] })
-            }).then(r => r.json());
-            
-            let invData = dynResponse?.result?.data?.content?.fields?.value;
-            if (invData?.fields) invData = invData.fields; 
-            
-            const itemsArray = invData?.items || [];
-            let contents: any[] = [];
-            if (Array.isArray(itemsArray)) contents = itemsArray;
-            else if (itemsArray.fields && itemsArray.fields.contents) contents = itemsArray.fields.contents;
-            else if (itemsArray.contents) contents = itemsArray.contents;
-            
-            for (const item of contents) {
-               const typeId = item.key?.toString() || item.fields?.key?.toString();
-               if (typeId && FUEL_NAMES[typeId]) {
-                  const val = item.value || item.fields?.value;
-                  const qty = Number(val?.quantity || val?.fields?.quantity || 0);
-                  
-                  if (iterInvKey === openInvKey) {
-                      houseFuels[typeId] = (houseFuels[typeId] || 0) + qty;
-                  } else {
-                      allFuels[typeId] = (allFuels[typeId] || 0) + qty;
-                  }
-               }
+          const dynResponse = await fetch(rpcUrl, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "suix_getDynamicFieldObject", params: [storageUnitId, { type: "0x2::object::ID", value: iterInvKey }] })
+          }).then(r => r.json());
+
+          let invData = dynResponse?.result?.data?.content?.fields?.value;
+          if (invData?.fields) invData = invData.fields;
+
+          const itemsArray = invData?.items || [];
+          let contents: any[] = [];
+          if (Array.isArray(itemsArray)) contents = itemsArray;
+          else if (itemsArray.fields && itemsArray.fields.contents) contents = itemsArray.fields.contents;
+          else if (itemsArray.contents) contents = itemsArray.contents;
+
+          for (const item of contents) {
+            const typeId = item.key?.toString() || item.fields?.key?.toString();
+            if (typeId && FUEL_NAMES[typeId]) {
+              const val = item.value || item.fields?.value;
+              const qty = Number(val?.quantity || val?.fields?.quantity || 0);
+
+              if (iterInvKey === openInvKey) {
+                houseFuels[typeId] = (houseFuels[typeId] || 0) + qty;
+              } else {
+                allFuels[typeId] = (allFuels[typeId] || 0) + qty;
+              }
             }
+          }
         }
-        
+
         const regularList = Object.keys(allFuels).map(typeId => ({
-            id: typeId,
-            typeId: typeId,
-            quantity: allFuels[typeId].toString()
+          id: typeId,
+          typeId: typeId,
+          quantity: allFuels[typeId].toString()
         }));
-        
+
         const houseList = Object.keys(houseFuels).map(typeId => ({
-            id: typeId,
-            typeId: typeId,
-            quantity: houseFuels[typeId].toString()
+          id: typeId,
+          typeId: typeId,
+          quantity: houseFuels[typeId].toString()
         }));
-        
+
         setRegularFuelsList(regularList);
         setHouseFuelsList(houseList);
         setAvailableFuels(regularList);
-        
+
         const currentSelected = selectedFuelId || (regularList.length > 0 ? regularList[0].id : "");
         if (!selectedFuelId && regularList.length > 0) setSelectedFuelId(currentSelected);
-        
+
         if (currentSelected && houseFuels[currentSelected]) {
-            setMaxStake(Math.floor(houseFuels[currentSelected] / 800));
+          setMaxStake(Math.floor(houseFuels[currentSelected] / 800));
         } else {
-            setMaxStake(0);
+          setMaxStake(0);
         }
-        
+
       } catch (err: any) {
         console.log(`CATCH_ERR: ${err.message}`);
-        setMaxStake(0); 
+        setMaxStake(0);
         setAvailableFuels([]);
       }
     }
-    
+
     fetchStorageData();
     const interval = setInterval(fetchStorageData, 5000);
     return () => clearInterval(interval);
@@ -261,7 +261,7 @@ export function PokerTable() {
       setMessage("ERROR: Please select a fuel item to stake!");
       return;
     }
-    
+
     setLoading(true);
     setMessage("Dealing...");
     setFinalGameResult(null);
@@ -269,14 +269,14 @@ export function PokerTable() {
     try {
       const targetFuelRecord = availableFuels.find((f: any) => f.id === selectedFuelId);
       const stakeQty = targetFuelRecord ? Number(targetFuelRecord.quantity) : 1;
-      
+
       let actualStake = stakeQty;
       if (maxStake !== null && actualStake > maxStake) {
-          actualStake = maxStake;
+        actualStake = maxStake;
       }
 
       const txb = new Transaction();
-      
+
       txb.moveCall({
         target: `${pkgId}::poker::deposit_and_deal`,
         arguments: [
@@ -319,7 +319,7 @@ export function PokerTable() {
 
     try {
       const txb = new Transaction();
-      
+
       txb.moveCall({
         target: `${pkgId}::poker::draw_and_resolve`,
         arguments: [
@@ -342,39 +342,39 @@ export function PokerTable() {
         const result: any = await signAndExecuteTransaction({ transaction: txb });
         digest = result.digest || result.effects?.transactionDigest || result.Transaction?.digest;
       }
-      
+
       if (!digest) {
-          setMessage("No digest found! Check console.");
-          setLoading(false);
-          return;
+        setMessage("No digest found! Check console.");
+        setLoading(false);
+        return;
       }
 
       // Query standard sui RPC for events directly to bypass missing SDK wrapper methods
       const rpcResponse = await fetch(rpcUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-              jsonrpc: "2.0",
-              id: 1,
-              method: "sui_getTransactionBlock",
-              params: [digest, { showEvents: true }]
-          })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "sui_getTransactionBlock",
+          params: [digest, { showEvents: true }]
+        })
       }).then(r => r.json());
-      
+
       const txDetails = rpcResponse.result;
-      
+
       console.log("Threw cards", txDetails);
-      
+
       const resolvedEvent = txDetails.events?.find((e: any) => e.type.includes("::poker::HandResolved"));
       if (resolvedEvent) {
-          setFinalGameResult(resolvedEvent.parsedJson);
-          setGameSession(null);
-          setMessage("Hand resolved!");
+        setFinalGameResult(resolvedEvent.parsedJson);
+        setGameSession(null);
+        setMessage("Hand resolved!");
       } else {
-          setMessage("Hand resolved! Check terminal for payout info.");
-          refreshSession();
+        setMessage("Hand resolved! Check terminal for payout info.");
+        refreshSession();
       }
-      
+
       setLoading(false);
     } catch (error) {
       console.error(error);
@@ -384,7 +384,7 @@ export function PokerTable() {
   };
 
   const toggleHold = (index: number) => {
-    setHeldCards((prev: number[]) => 
+    setHeldCards((prev: number[]) =>
       prev.includes(index) ? prev.filter((i: number) => i !== index) : [...prev, index]
     );
   };
@@ -392,19 +392,19 @@ export function PokerTable() {
   const getCardsArray = () => {
     if (!gameSession) return [];
     const src = gameSession.data?.content?.cards || gameSession.data?.content?.fields?.cards;
-    
+
     if (Array.isArray(src)) return src;
-    
+
     if (typeof src === "string") {
       try {
         // If it was comma separated
         if (src.includes(",")) return src.split(",").map(Number);
-        
+
         // base64 decode vector<u8> which is Sui's default encoding for binary
         const binaryString = atob(src);
         const bytes = [];
         for (let i = 0; i < binaryString.length; i++) {
-            bytes.push(binaryString.charCodeAt(i));
+          bytes.push(binaryString.charCodeAt(i));
         }
         return bytes;
       } catch (e) {
@@ -426,70 +426,70 @@ export function PokerTable() {
       {/* ADMIN OVERLAY MASK - Disabled */}
       {false && (
         <Box style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(10, 10, 15, 0.95)", zIndex: 100, border: "1px solid var(--color-frontier-orange)", padding: "20px", overflowY: "auto", backdropFilter: "blur(4px)" }}>
-           <Flex justify="between" align="center" mb="4" style={{ borderBottom: "1px solid var(--color-gunmetal)", paddingBottom: "10px" }}>
-              <Heading size="5" style={{ color: "var(--color-frontier-orange)", textTransform: "uppercase", letterSpacing: "2px" }}>Storage Admin</Heading>
-              <Button onClick={() => undefined} style={{ background: "none", color: "var(--color-text-muted)", cursor: "pointer", border: "1px solid var(--color-gunmetal)", borderRadius: "0px", fontFamily: "'Space Mono', monospace" }}>[X] CLOSE</Button>
-           </Flex>
-           
-           <Box mb="5">
-               <Heading size="3" style={{ color: "var(--color-matrix-green)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>House Open Storage</Heading>
-               {houseFuelsList.length > 0 ? houseFuelsList.map(f => (
-                   <Flex key={f.id} justify="between" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
-                       <Text style={{ fontFamily: "'Space Mono', monospace", color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
-                       <Text style={{ fontFamily: "'Space Mono', monospace", color: "var(--color-matrix-green)", fontWeight: "bold" }}>{f.quantity}</Text>
-                   </Flex>
-               )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No liquidity trapped in house.</Text>}
-           </Box>
-           
-           <Box mb="5">
-               <Heading size="3" style={{ color: "var(--color-frontier-orange)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>Player Regular Storage</Heading>
-               {regularFuelsList.length > 0 ? regularFuelsList.map(f => (
-                   <Flex key={f.id} justify="between" align="center" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
-                       <Text style={{ fontFamily: "'Space Mono', monospace", color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
-                       <Flex align="center" gap="3">
-                           <Text style={{ fontFamily: "'Space Mono', monospace", color: "var(--color-frontier-orange)", fontWeight: "bold" }}>{f.quantity}</Text>
-                           <Button 
-                             onClick={async () => {
-                                 try {
-                                     const txb = new Transaction();
-                                     txb.moveCall({
-                                         target: `${pkgId}::poker::user_fund_house`,
-                                         arguments: [
-                                             txb.object(configId),
-                                             txb.object(storageUnitId),
-                                             txb.object(characterId),
-                                             txb.pure.u64(f.typeId),
-                                             txb.pure.u32(f.quantity)
-                                         ]
-                                     });
-                                     if (isZkLoggedIn) {
-                                         txb.setSender(activeAddress!);
-                                         const txBytes = await txb.build({ client: suiClient });
-                                         await signAndExecuteZkTx(txBytes);
-                                     } else {
-                                         await signAndExecuteTransaction({ transaction: txb });
-                                     }
-                                     setRefreshTrigger(prev => prev + 1);
-                                 } catch (e: any) {
-                                     setMessage("FUND ERROR: " + (e?.message || String(e)));
-                                     // Close the overlay so they can see the message
-                                 }
-                             }}
-                             style={{ background: "var(--color-gunmetal)", padding: "2px 8px", cursor: "pointer", fontSize: "10px" }}
-                           >FUND HOUSE</Button>
-                       </Flex>
-                   </Flex>
-               )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No available fuel stakes.</Text>}
-           </Box>
+          <Flex justify="between" align="center" mb="4" style={{ borderBottom: "1px solid var(--color-gunmetal)", paddingBottom: "10px" }}>
+            <Heading size="5" style={{ color: "var(--color-frontier-orange)", textTransform: "uppercase", letterSpacing: "2px" }}>Storage Admin</Heading>
+            <Button onClick={() => undefined} style={{ background: "none", color: "var(--color-text-muted)", cursor: "pointer", border: "1px solid var(--color-gunmetal)", borderRadius: "0px", fontFamily: "'Space Mono', monospace" }}>[X] CLOSE</Button>
+          </Flex>
+
+          <Box mb="5">
+            <Heading size="3" style={{ color: "var(--color-matrix-green)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>House Open Storage</Heading>
+            {houseFuelsList.length > 0 ? houseFuelsList.map(f => (
+              <Flex key={f.id} justify="between" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
+                <Text style={{ fontFamily: "'Space Mono', monospace", color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
+                <Text style={{ fontFamily: "'Space Mono', monospace", color: "var(--color-matrix-green)", fontWeight: "bold" }}>{f.quantity}</Text>
+              </Flex>
+            )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No liquidity trapped in house.</Text>}
+          </Box>
+
+          <Box mb="5">
+            <Heading size="3" style={{ color: "var(--color-frontier-orange)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>Player Regular Storage</Heading>
+            {regularFuelsList.length > 0 ? regularFuelsList.map(f => (
+              <Flex key={f.id} justify="between" align="center" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
+                <Text style={{ fontFamily: "'Space Mono', monospace", color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
+                <Flex align="center" gap="3">
+                  <Text style={{ fontFamily: "'Space Mono', monospace", color: "var(--color-frontier-orange)", fontWeight: "bold" }}>{f.quantity}</Text>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const txb = new Transaction();
+                        txb.moveCall({
+                          target: `${pkgId}::poker::user_fund_house`,
+                          arguments: [
+                            txb.object(configId),
+                            txb.object(storageUnitId),
+                            txb.object(characterId),
+                            txb.pure.u64(f.typeId),
+                            txb.pure.u32(f.quantity)
+                          ]
+                        });
+                        if (isZkLoggedIn) {
+                          txb.setSender(activeAddress!);
+                          const txBytes = await txb.build({ client: suiClient });
+                          await signAndExecuteZkTx(txBytes);
+                        } else {
+                          await signAndExecuteTransaction({ transaction: txb });
+                        }
+                        setRefreshTrigger(prev => prev + 1);
+                      } catch (e: any) {
+                        setMessage("FUND ERROR: " + (e?.message || String(e)));
+                        // Close the overlay so they can see the message
+                      }
+                    }}
+                    style={{ background: "var(--color-gunmetal)", padding: "2px 8px", cursor: "pointer", fontSize: "10px" }}
+                  >FUND HOUSE</Button>
+                </Flex>
+              </Flex>
+            )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No available fuel stakes.</Text>}
+          </Box>
         </Box>
       )}
 
-      <Box 
-        mb="4" 
-        style={{ 
-          backgroundImage: "url('/backdrop.png')", 
-          backgroundSize: "cover", 
-          backgroundPosition: "center", 
+      <Box
+        mb="4"
+        style={{
+          backgroundImage: "url('/backdrop.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
           aspectRatio: "3/1",
           display: "flex",
           flexDirection: "column",
@@ -504,32 +504,32 @@ export function PokerTable() {
         <Box style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.6)" }} />
         <Heading size="6" style={{ letterSpacing: "4px", textTransform: "uppercase", color: "var(--color-frontier-orange)", position: "relative", zIndex: 1 }}>BURN :: RATE</Heading>
         <Text size="2" style={{ letterSpacing: "2px", textTransform: "uppercase", color: "var(--color-text-muted)", position: "relative", zIndex: 1, display: "block", marginTop: "4px" }}>Fuel Poker</Text>
-        
+
         {false && (
-             <Button 
-               onClick={() => undefined}
-               variant="ghost"
-               style={{ position: "absolute", top: "12px", right: "20px", color: "var(--color-frontier-orange)", cursor: "pointer", zIndex: 10, padding: 0 }}
-             >
-               <GearIcon width="24" height="24" />
-             </Button>
+          <Button
+            onClick={() => undefined}
+            variant="ghost"
+            style={{ position: "absolute", top: "12px", right: "20px", color: "var(--color-frontier-orange)", cursor: "pointer", zIndex: 10, padding: 0 }}
+          >
+            <GearIcon width="24" height="24" />
+          </Button>
         )}
 
         <Box style={{ position: "absolute", bottom: "12px", right: "20px", textAlign: "right", zIndex: 1 }}>
-          <Text 
+          <Text
             className="eve-flicker"
-            size="2" 
+            size="2"
             style={{ color: "var(--color-frontier-orange)", fontFamily: "'Space Mono', monospace", display: "block" }}
           >
             {maxStake !== null ? (
-               <>{fuelName}: <b style={{ color: "var(--color-frontier-orange)" }}>{maxStake} MAX</b></>
+              <>{fuelName}: <b style={{ color: "var(--color-frontier-orange)" }}>{maxStake} MAX</b></>
             ) : "SYNCING FUNDS..."}
           </Text>
         </Box>
       </Box>
 
       <Box style={{ minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "space-between", marginBottom: "20px" }}>
-        
+
         {/* TOP: Result Section (Always 32px or empty) */}
         <Box style={{ minHeight: "42px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
           {finalGameResult && (
@@ -541,12 +541,12 @@ export function PokerTable() {
 
         {/* MIDDLE: Cards Section (Always 120px) */}
         <Box style={{ position: "relative", minHeight: "120px", display: "flex", flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: "8px" }}>
-          
+
           {/* WINNER OVERLAY */}
           {finalGameResult && (
-            <Heading 
-              size="8" 
-              style={{ 
+            <Heading
+              size="8"
+              style={{
                 position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 30,
                 color: Number(finalGameResult.multiplier) > 0 ? "var(--color-matrix-green)" : "var(--color-hostile-red)",
                 textShadow: "0 0 20px rgba(0,0,0,0.9), 0 0 10px rgba(0,0,0,0.8)",
@@ -573,13 +573,13 @@ export function PokerTable() {
             getCardsArray().map((cardVal: number, i: number) => ({ cardVal, originalIndex: i }))
               .sort((a, b) => (a.cardVal % 13) - (b.cardVal % 13) || Math.floor(a.cardVal / 13) - Math.floor(b.cardVal / 13))
               .map(({ cardVal, originalIndex }) => (
-              <Box key={originalIndex} className="eve-card eve-glitch-hover" onClick={() => toggleHold(originalIndex)} style={{ border: `1px solid ${heldCards.includes(originalIndex) ? "var(--color-frontier-orange)" : "var(--color-gunmetal)"}`, cursor: "pointer", backgroundColor: heldCards.includes(originalIndex) ? "var(--color-charcoal)" : "var(--color-background)", backgroundImage: cardVal >= 13 && cardVal <= 38 ? (heldCards.includes(originalIndex) ? "linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('/red-bg.png')" : "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/red-bg.png')") : (heldCards.includes(originalIndex) ? "linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('/black-bg.png')" : "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/black-bg.png')"), backgroundSize: "cover", backgroundPosition: "center", transition: "all 0.2s", width: "80px", aspectRatio: "5/7", position: "relative", borderRadius: "6px", transform: heldCards.includes(originalIndex) ? "scale(0.95)" : "scale(1)", boxShadow: heldCards.includes(originalIndex) ? "inset 0 0 15px var(--color-orange-glow)" : "none" }}>
-                <div style={{ position: "absolute", top: "8px", left: "8px", textAlign: "left", lineHeight: "1", zIndex: 20 }}>
-                  <Text size="4" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", fontWeight: "bold", display: "block" }}>{getCardParts(cardVal).value}</Text>
-                  <Text size="5" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", display: "block" }}>{getCardParts(cardVal).suit}</Text>
-                </div>
-              </Box>
-            ))
+                <Box key={originalIndex} className="eve-card eve-glitch-hover" onClick={() => toggleHold(originalIndex)} style={{ border: `1px solid ${heldCards.includes(originalIndex) ? "var(--color-frontier-orange)" : "var(--color-gunmetal)"}`, cursor: "pointer", backgroundColor: heldCards.includes(originalIndex) ? "var(--color-charcoal)" : "var(--color-background)", backgroundImage: cardVal >= 13 && cardVal <= 38 ? (heldCards.includes(originalIndex) ? "linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('/red-bg.png')" : "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/red-bg.png')") : (heldCards.includes(originalIndex) ? "linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('/black-bg.png')" : "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/black-bg.png')"), backgroundSize: "cover", backgroundPosition: "center", transition: "all 0.2s", width: "80px", aspectRatio: "5/7", position: "relative", borderRadius: "6px", transform: heldCards.includes(originalIndex) ? "scale(0.95)" : "scale(1)", boxShadow: heldCards.includes(originalIndex) ? "inset 0 0 15px var(--color-orange-glow)" : "none" }}>
+                  <div style={{ position: "absolute", top: "8px", left: "8px", textAlign: "left", lineHeight: "1", zIndex: 20 }}>
+                    <Text size="4" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", fontWeight: "bold", display: "block" }}>{getCardParts(cardVal).value}</Text>
+                    <Text size="5" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", display: "block" }}>{getCardParts(cardVal).suit}</Text>
+                  </div>
+                </Box>
+              ))
           ) : null}
         </Box>
 
@@ -594,7 +594,7 @@ export function PokerTable() {
               <Text size="2" color="gray" mb="2" style={{ display: "block", textAlign: "left" }}>Select Stake (Storage Unit Available Fuels):</Text>
               {availableFuels.length > 0 ? (
                 <Box style={{ position: "relative", width: "100%", zIndex: 50 }}>
-                  <Box 
+                  <Box
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     style={{ padding: "10px", background: "var(--color-background)", color: "var(--color-frontier-orange)", border: "1px solid var(--color-gunmetal)", cursor: "pointer", display: "flex", justifyContent: "space-between", fontFamily: "'Space Mono', monospace" }}
                   >
@@ -604,7 +604,7 @@ export function PokerTable() {
                   {isDropdownOpen && (
                     <Box style={{ position: "absolute", bottom: "100%", left: 0, right: 0, background: "var(--color-background)", border: "1px solid var(--color-frontier-orange)", zIndex: 100, maxHeight: "150px", overflowY: "auto", boxShadow: "0 -2px 10px rgba(0,0,0,0.8)" }}>
                       {availableFuels.map(f => (
-                        <Box 
+                        <Box
                           key={f.id}
                           onClick={() => { setSelectedFuelId(f.id); setIsDropdownOpen(false); }}
                           style={{ padding: "10px", cursor: "pointer", color: "var(--color-frontier-orange)", borderBottom: "1px solid var(--color-gunmetal)", fontFamily: "'Space Mono', monospace" }}
@@ -636,114 +636,114 @@ export function PokerTable() {
       {/* NEW ADMIN PANEL */}
       {isOwner && (
         <Box style={{ marginTop: "20px", border: "1px solid var(--color-frontier-orange)", padding: "16px", background: "var(--color-background)", fontFamily: "'Space Mono', monospace" }}>
-           
-           
-           <Box mb="4">
-               <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>House Open Storage</h2>
-               {houseFuelsList.length > 0 ? houseFuelsList.map((f: any) => (
-                   <Flex key={f.id} justify="between" align="center" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
-                       <Text style={{ color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
-                       <Flex align="center" gap="3">
-                           <Text style={{ color: "var(--color-matrix-green)", fontWeight: "bold" }}>{f.quantity}</Text>
-                           <Button 
-                             onClick={async () => {
-                                 try {
-                                     if (!adminCapId) {
-                                         setMessage("DEFUND ERROR: Missing VITE_POKER_ADMIN_CAP_ID in local env");
-                                         return;
-                                     }
-                                     const txb = new Transaction();
-                                     txb.moveCall({
-                                         target: `${pkgId}::poker::defund_house`,
-                                         arguments: [
-                                             txb.object(adminCapId),
-                                             txb.object(storageUnitId),
-                                             txb.object(characterId),
-                                             txb.pure.u64(f.typeId),
-                                             txb.pure.u32(f.quantity)
-                                         ]
-                                     });
-                                     if (isZkLoggedIn) {
-                                         txb.setSender(activeAddress!);
-                                         const txBytes = await txb.build({ client: suiClient });
-                                         await signAndExecuteZkTx(txBytes);
-                                     } else {
-                                         await signAndExecuteTransaction({ transaction: txb });
-                                     }
-                                     setRefreshTrigger((prev: number) => prev + 1);
-                                 } catch (e: any) {
-                                     setMessage("DEFUND ERROR: " + (e?.message || String(e)));
-                                 }
-                             }}
-                             style={{ background: "var(--color-hostile-red)", color: "#000", padding: "2px 8px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
-                           >DEFUND</Button>
-                       </Flex>
-                   </Flex>
-               )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No liquidity trapped in house.</Text>}
-           </Box>
-           
-           <Box mb="4">
-               <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>Player Regular Storage</h2>
-               {regularFuelsList.length > 0 ? regularFuelsList.map((f: any) => (
-                   <Flex key={f.id} justify="between" align="center" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
-                       <Text style={{ color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
-                       <Flex align="center" gap="3">
-                           <Text style={{ color: "var(--color-frontier-orange)", fontWeight: "bold" }}>{f.quantity}</Text>
-                           <Button 
-                             onClick={async () => {
-                                 try {
-                                     const txb = new Transaction();
-                                     txb.moveCall({
-                                         target: `${pkgId}::poker::user_fund_house`,
-                                         arguments: [
-                                             txb.object(configId),
-                                             txb.object(storageUnitId),
-                                             txb.object(characterId),
-                                             txb.pure.u64(f.typeId),
-                                             txb.pure.u32(f.quantity)
-                                         ]
-                                     });
-                                     if (isZkLoggedIn) {
-                                         txb.setSender(activeAddress!);
-                                         const txBytes = await txb.build({ client: suiClient });
-                                         await signAndExecuteZkTx(txBytes);
-                                     } else {
-                                         await signAndExecuteTransaction({ transaction: txb });
-                                     }
-                                     setRefreshTrigger((prev: number) => prev + 1);
-                                 } catch (e: any) {
-                                     setMessage("FUND ERROR: " + (e?.message || String(e)));
-                                 }
-                             }}
-                             style={{ background: "var(--color-matrix-green)", color: "#000", padding: "2px 8px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
-                           >FUND HOUSE</Button>
-                       </Flex>
-                   </Flex>
-               )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No available fuel stakes.</Text>}
-           </Box>
 
-           <Box>
-               <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>System Logs</h2>
-               <Box style={{ background: "var(--color-charcoal)", padding: "10px", border: "1px solid var(--color-gunmetal)", fontFamily: "'Space Mono', monospace" }}>
-                   {smartObject.loading ? (
-                     <Text size="1" style={{ color: "var(--color-matrix-green)", display: "block", fontSize: "10px", lineHeight: 1, margin: 0, padding: 0 }}>
-                       SYNCING WITH GRAPHQL...
-                     </Text>
-                   ) : (
-                     <>
-                       <Text size="1" style={{ color: "var(--color-frontier-orange)", display: "block", fontSize: "10px", opacity: 0.7, lineHeight: 1, margin: 0, padding: 0 }}>
-                         ASS {">"} {storageUnitId ? storageUnitId.substring(0,8) : "NONE"}
-                       </Text>
-                       <Text size="1" style={{ color: "var(--color-frontier-orange)", display: "block", fontSize: "10px", opacity: 0.7, lineHeight: 1, margin: 0, padding: 0 }}>
-                         CHR {">"} {characterId ? characterId.substring(0,8) : "NONE"}
-                       </Text>
-                     </>
-                   )}
-                   <Text size="1" style={{ color: "var(--color-frontier-orange)", display: "block", fontSize: "10px", opacity: 0.7, lineHeight: 1, margin: 0, padding: 0 }}>
-                     SYS {">"} {message.toUpperCase()}
-                   </Text>
-               </Box>
-           </Box>
+
+          <Box mb="4">
+            <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>House Open Storage</h2>
+            {houseFuelsList.length > 0 ? houseFuelsList.map((f: any) => (
+              <Flex key={f.id} justify="between" align="center" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
+                <Text style={{ color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
+                <Flex align="center" gap="3">
+                  <Text style={{ color: "var(--color-matrix-green)", fontWeight: "bold" }}>{f.quantity}</Text>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        if (!adminCapId) {
+                          setMessage("DEFUND ERROR: Missing VITE_POKER_ADMIN_CAP_ID in local env");
+                          return;
+                        }
+                        const txb = new Transaction();
+                        txb.moveCall({
+                          target: `${pkgId}::poker::defund_house`,
+                          arguments: [
+                            txb.object(adminCapId),
+                            txb.object(storageUnitId),
+                            txb.object(characterId),
+                            txb.pure.u64(f.typeId),
+                            txb.pure.u32(f.quantity)
+                          ]
+                        });
+                        if (isZkLoggedIn) {
+                          txb.setSender(activeAddress!);
+                          const txBytes = await txb.build({ client: suiClient });
+                          await signAndExecuteZkTx(txBytes);
+                        } else {
+                          await signAndExecuteTransaction({ transaction: txb });
+                        }
+                        setRefreshTrigger((prev: number) => prev + 1);
+                      } catch (e: any) {
+                        setMessage("DEFUND ERROR: " + (e?.message || String(e)));
+                      }
+                    }}
+                    style={{ background: "var(--color-hostile-red)", color: "#000", padding: "2px 8px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
+                  >DEFUND</Button>
+                </Flex>
+              </Flex>
+            )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No liquidity trapped in house.</Text>}
+          </Box>
+
+          <Box mb="4">
+            <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>Player Regular Storage</h2>
+            {regularFuelsList.length > 0 ? regularFuelsList.map((f: any) => (
+              <Flex key={f.id} justify="between" align="center" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
+                <Text style={{ color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
+                <Flex align="center" gap="3">
+                  <Text style={{ color: "var(--color-frontier-orange)", fontWeight: "bold" }}>{f.quantity}</Text>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const txb = new Transaction();
+                        txb.moveCall({
+                          target: `${pkgId}::poker::user_fund_house`,
+                          arguments: [
+                            txb.object(configId),
+                            txb.object(storageUnitId),
+                            txb.object(characterId),
+                            txb.pure.u64(f.typeId),
+                            txb.pure.u32(f.quantity)
+                          ]
+                        });
+                        if (isZkLoggedIn) {
+                          txb.setSender(activeAddress!);
+                          const txBytes = await txb.build({ client: suiClient });
+                          await signAndExecuteZkTx(txBytes);
+                        } else {
+                          await signAndExecuteTransaction({ transaction: txb });
+                        }
+                        setRefreshTrigger((prev: number) => prev + 1);
+                      } catch (e: any) {
+                        setMessage("FUND ERROR: " + (e?.message || String(e)));
+                      }
+                    }}
+                    style={{ background: "var(--color-matrix-green)", color: "#000", padding: "2px 8px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
+                  >FUND HOUSE</Button>
+                </Flex>
+              </Flex>
+            )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No available fuel stakes.</Text>}
+          </Box>
+
+          <Box>
+            <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>System Logs</h2>
+            <Box style={{ background: "var(--color-charcoal)", padding: "10px", border: "1px solid var(--color-gunmetal)", fontFamily: "'Space Mono', monospace" }}>
+              {smartObject.loading ? (
+                <Text size="1" style={{ color: "var(--color-matrix-green)", display: "block", fontSize: "10px", lineHeight: 1, margin: 0, padding: 0 }}>
+                  SYNCING WITH GRAPHQL...
+                </Text>
+              ) : (
+                <>
+                  <Text size="1" style={{ color: "var(--color-frontier-orange)", display: "block", fontSize: "10px", opacity: 0.7, lineHeight: 1, margin: 0, padding: 0 }}>
+                    ASS {">"} {storageUnitId ? storageUnitId.substring(0, 8) : "NONE"}
+                  </Text>
+                  <Text size="1" style={{ color: "var(--color-frontier-orange)", display: "block", fontSize: "10px", opacity: 0.7, lineHeight: 1, margin: 0, padding: 0 }}>
+                    CHR {">"} {characterId ? characterId.substring(0, 8) : "NONE"}
+                  </Text>
+                </>
+              )}
+              <Text size="1" style={{ color: "var(--color-frontier-orange)", display: "block", fontSize: "10px", opacity: 0.7, lineHeight: 1, margin: 0, padding: 0 }}>
+                SYS {">"} {message.toUpperCase()}
+              </Text>
+            </Box>
+          </Box>
 
         </Box>
       )}
