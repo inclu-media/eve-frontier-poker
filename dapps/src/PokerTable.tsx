@@ -85,9 +85,9 @@ export function PokerTable() {
   const storageUnitId = extractedStorageId || import.meta.env.VITE_STORAGE_UNIT_ID || "0x6545247aa7cfeb5b3bc4b694f5d0390d90d2276427520c615c11ac1dd9e15ab9";
   
   // Safely extract the Character ID, explicitly preventing the wallet address from leaking in.
-  let validCharId = charInfo?.characterId?.toString() || getParam("characterId") || dynamicCharId;
+  let validCharId = charInfo?.characterId?.toString() || getParam("characterId") || dynamicCharId || import.meta.env.VITE_CHARACTER_ID;
   if (!validCharId || validCharId === activeAddress || validCharId === "0x123") {
-      validCharId = "0x554a600673c698d91b680336f3a513ddf4c3e623dfb82cfb37a93f1e9a06a1b2"; // Final static catch-all for Utopia
+      validCharId = "0x085622495bf81cad9e3e5c3a97985a0685328b64b0b379aaf893bfa201cbb5ed"; // Final static catch-all for Utopia
   }
   const characterId = validCharId;
   const isOwner = Boolean(
