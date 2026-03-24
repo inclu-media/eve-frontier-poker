@@ -44,6 +44,7 @@ export function PokerTable() {
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dynamicCharId, setDynamicCharId] = useState<string | null>(null);
+  const [ownerCapId, setOwnerCapId] = useState<string | null>(null);
 
   // adminOpen state removed because it is no longer used
   const [houseFuelsList, setHouseFuelsList] = useState<any[]>([]);
@@ -135,6 +136,9 @@ export function PokerTable() {
         }).then(r => r.json());
 
         const [suResponse] = await Promise.all([suPromise]);
+
+        const fetchedOwnerCapId = suResponse?.result?.data?.content?.fields?.owner_cap_id;
+        if (fetchedOwnerCapId) setOwnerCapId(fetchedOwnerCapId);
 
         // Import lightweight hash on the fly since we are inside a React component
         const blake2b = (await import('@noble/hashes/blake2b')).blake2b;
@@ -635,8 +639,52 @@ export function PokerTable() {
 
       {/* NEW ADMIN PANEL */}
       {isOwner && (
-        <Box style={{ marginTop: "20px", border: "1px solid var(--color-frontier-orange)", padding: "16px", background: "var(--color-background)", fontFamily: "'Space Mono', monospace" }}>
+        <Box style={{ marginTop: "20px", border: "1px solid var(--color-frontier-orange)", padding: "16px", background: "var(--color-background)", fontFamily: "'Space Mono', monospace", position: "relative" }}>
 
+          {ownerCapId && (
+            <Button
+              onClick={async () => {
+                try {
+                  const txb = new Transaction();
+                  const worldPkg = import.meta.env.VITE_EVE_WORLD_PACKAGE_ID || "0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75";
+                  const authType = `${pkgId}::config::XAuth`;
+                  
+                  const [storageUnitOwnerCap, returnReceipt] = txb.moveCall({
+                    target: `${worldPkg}::character::borrow_owner_cap`,
+                    typeArguments: [`${worldPkg}::storage_unit::StorageUnit`],
+                    arguments: [txb.object(characterId), txb.object(ownerCapId)],
+                  });
+
+                  txb.moveCall({
+                    target: `${worldPkg}::storage_unit::authorize_extension`,
+                    typeArguments: [authType],
+                    arguments: [txb.object(storageUnitId), storageUnitOwnerCap],
+                  });
+
+                  txb.moveCall({
+                    target: `${worldPkg}::character::return_owner_cap`,
+                    typeArguments: [`${worldPkg}::storage_unit::StorageUnit`],
+                    arguments: [txb.object(characterId), storageUnitOwnerCap, returnReceipt],
+                  });
+
+                  if (isZkLoggedIn) {
+                    txb.setSender(activeAddress!);
+                    const txBytes = await txb.build({ client: suiClient });
+                    await signAndExecuteZkTx(txBytes);
+                  } else {
+                    await signAndExecuteTransaction({ transaction: txb });
+                  }
+                  setMessage("AUTHORIZATION GRANTED!");
+                } catch (e: any) {
+                  setMessage("AUTH ERROR: " + (e?.message || String(e)));
+                }
+              }}
+              style={{ position: "absolute", top: "16px", right: "16px", background: "var(--color-gunmetal)", color: "var(--color-frontier-orange)", border: "1px solid var(--color-frontier-orange)", padding: "4px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
+              className="eve-glitch-hover"
+            >
+              AUTHORIZE DAPP
+            </Button>
+          )}
 
           <Box mb="4">
             <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>House Open Storage</h2>
