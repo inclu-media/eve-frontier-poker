@@ -1,12 +1,9 @@
 [package]
 name = "storage_poker_extension"
-edition = "2024"
+edition = "2024.beta"
 
 [dependencies]
 world = { local = "../../../world-contracts/contracts/world" }
-
-[addresses]
-storage_poker_extension = "0x0"
 
 [environments]
 testnet_internal = "4c78adac"

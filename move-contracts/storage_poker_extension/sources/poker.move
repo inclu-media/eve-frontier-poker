@@ -113,7 +113,13 @@ public entry fun defund_house(
         quantity,
         ctx
     );
-    sui::transfer::public_transfer(withdrawn_item, ctx.sender());
+    world::storage_unit::deposit_item<XAuth>(
+        storage_unit,
+        character,
+        withdrawn_item,
+        config::x_auth(),
+        ctx
+    );
 }
 public fun set_poker_config(
     extension_config: &mut ExtensionConfig,
