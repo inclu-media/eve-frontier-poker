@@ -1,99 +1,66 @@
 # EVE Frontier: Poker DApp Build Flow & Architecture
 
-This document outlines the end-to-end integration and build pipeline for the EVE Frontier Poker DApp, chronicling the transition from Move smart contract logic up to the frontend UI deployment.
+This document outlines the final streamlined pipeline for compiling the Poker smart contract, linking it to the Canonical EVE World, and deploying the React DApp.
 
 ## 1. Smart Contract Deployment (Move)
-The core logic resides in the `poker.move` smart assembly. Deployment to the Sui Network (Localnet or Testnet) must be done first.
+
+The core logic resides in the `poker.move` smart assembly. You must deploy your contract to the Sui Canonical Testnet to interact identically with native EVE items and characters.
 
 1. Navigate to the contract directory and build the assembly using the Sui CLI:
    ```bash
    cd move-contracts/storage_poker_extension
    sui move build
    ```
-2. Publish the package to your active network:
-   * **Localnet:**  
-     ```bash
-     sui client test-publish --build-env testnet --pubfile-path ../../deployments/localnet/Pub.localnet.toml
-     ```
-   * **Testnet:**  
-     ```bash
-     sui client switch --env official-testnet
-     sui client publish
-     ```
-     *(Note: We specifically override the environment config and use the unflagged proxy to bypass strict Sui TOML regex parsers for testnet aliases).*
-3. Upon deployment, record the resulting **Package ID** and the **PokerConfig Object ID** created by the initialization function.
+2. Publish the package specifically targeting the `official-testnet` environment:
+   ```bash
+   sui client switch --env official-testnet
+   sui client publish
+   ```
+3. Upon deployment, record the resulting **Package ID**, the **AdminCap ID**, and the **ExtensionConfig ID** created by the initialization function.
+4. **Whitelist Fuels:** Use the Sui CLI (or the legacy `poker-flow.ts` script) to link your supported Fuel definitions (like EU-90) into the newly created `PokerConfig`.
 
-## 2. Environment Variables (`.env`)
-Both the TypeScript scripts and the frontend DApp require access to the deployed object constraints. These are synchronized via `.env` files.
+## 2. Environment Variables (`dapps/.env`)
 
-### Root Workspace `.env` (For TS Scripts)
-```env
-SUI_URL=https://fullnode.testnet.sui.io:443
-PACKAGE_ID=<Deployed Poker Package ID>
-POKER_CONFIG_ID=<Created PokerConfig Object ID>
-STORAGE_UNIT_ID=<Your initialized Storage Unit Object ID>
-```
+The frontend DApp requires explicit references to both your newly deployed logic objects and the Canonical EVE World system variables. 
 
-### DApp Environment `dapps/.env` (For Frontend GUI)
+Create or update your `.env` file inside the `/dapps` directory:
 ```env
 VITE_SUI_RPC_URL=https://fullnode.testnet.sui.io:443
-VITE_BUILDER_SCENE_PACKAGE_ID=<Deployed Poker Package ID>
-VITE_POKER_EXTENSION_CONFIG_ID=<Created PokerConfig Object ID>
-VITE_STORAGE_UNIT_ID=<Your initialized Storage Unit Object ID>
-VITE_CHARACTER_ID=<Your Game Character Object ID>
+VITE_EVE_WORLD_PACKAGE_ID=0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75
+
+VITE_BUILDER_SCENE_PACKAGE_ID=<Your Deployed Poker Package ID>
+VITE_POKER_EXTENSION_CONFIG_ID=<Your ExtensionConfig Object ID>
+VITE_POKER_ADMIN_CAP_ID=<Your AdminCap Object ID>
+
+VITE_STORAGE_UNIT_ID=<Your Target Smart Assembly / Storage Unit Object ID>
+VITE_CHARACTER_ID=<Your Game Character Object ID Fallback>
 ```
 
-## 3. Initialization Scripts Order (`ts-scripts/storage_poker_extension/`)
-A suite of TypeScript logic scripts exists to bridge the bare metal deployment into a playable state. You MUST execute these sequentially via `pnpm tsx` to seed the world state and configure the smart contract before launching the DApp.
+## 3. DApp Initialization & Local Deployment
 
-### Step 1: Configure Rules & Authorize
-*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/poker-flow.ts`
-*   **Purpose:** Executes the Admin `set_poker_config` module on the newly deployed Config Object to explicitly whitelist valid Fuel type-IDs. It then officially authorizes your Storage Unit to be acted upon via the Poker Extension framework.
+All administrative operations (Authorizing, Funding, and Defunding) have been migrated entirely into the React UI natively mimicking the behavior of the EVE Smart Assembly. Terminal scripts are no longer required to manage physical game states.
 
-### Step 2: Initialize House Bank Storage
-*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/fund-house.ts`
-*   **Purpose:** Creates a physical EVE Storage Unit and locks initial house liquidity inside it so that the contract can mathematically guarantee House payouts during the `max_win` fund check. This requires the framework authorization from Step 1.
-*   **Action:** Copy the resulting `STORAGE_UNIT_ID` to your root and `/dapps` `.env` files.
-
-### Step 3: Seed Player Stakes
-*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/deposit-stake.ts`
-*   **Purpose:** Simulates the manual player action of depositing physical Fuel items directly into the Storage Unit's active inventory. Because the Poker DApp now safely reads directly from the Storage Unit rather than sweeping the player's wallet, this script seeds the storage with valid fuel stacks to allow you to interact with the frontend's Stake Dropdown selector without actually needing to mine in-game.
-
-### Step 4: Verify Balances (Optional)
-*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/check-funds.ts`
-*   **Purpose:** A diagnostic verification tool that queries the live SUI network to map the specific Resource Quantities currently escrowed in the Storage Unit. It distinctly separates and tallies the House Funds (Open Inventory mapped via `fund-house.ts`) against the Player Stakes (Regular Inventory mapped via `deposit-stake.ts`).
-
-### Step 5: Defund House (Optional/Cleanup)
-*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/defund-house.ts`
-*   **Purpose:** Sweeps all trapped liquidity (House Funds) from the Storage Unit's open inventory back into the Admin Wallet. Useful for clean slate testing or reclaiming funds.
-
-### Step 6: Empty Player Storage (Optional/Cleanup)
-*   **Command:** `pnpm tsx ts-scripts/storage_poker_extension/empty-storage.ts`
-*   **Purpose:** Sweeps all specific Player stakes from their regular inventory partition in the Storage Unit, throwing the extracted fuel into a void address, effectively restoring the storage unit to absolute zero liquidity. Useful for clearing out residue before new testing rounds.
-
-## 4. DApp Frontend Integration
-Once the Smart Assembly is published, environmental variables are synced, and the House Storage is funded:
 1. Navigate to the `/dapps` directory.
-2. Install dependencies via `pnpm install` (or your preferred package manager).
-3. The core layout logic resides inside `src/PokerTable.tsx`, which queries the User Wallet for valid Fuel types and broadcasts the active `deposit_and_deal` transactions back to the Move backend.
-4. Launch the local development server:
+2. Install dependencies via `pnpm install` (or your preferred manager).
+3. Launch the local development server:
    ```bash
    pnpm run dev
    ```
-5. Interface with the app via the configured localhost port, connecting your Sui testnet wallet to play.
+4. **Initial Authorization:** 
+   Connect your owning wallet in the local browser. The DApp's **Admin Console** will become visible. Click **AUTHORIZE DAPP** to natively link your physical Storage Unit to the custom Poker contract logic.
+5. **Fund the House:**
+   Once authorized, your Player Inventory will load. Click **FUND HOUSE** next to any valid fuel type to lock it into the Open Inventory to bankroll the smart contract. You can reclaim these at any time using **DEFUND**.
 
-## 5. Vercel Deployment
+## 4. Vercel Web Deployment
 
-The Poker DApp is configured for automatic deployment via Vercel.
+The Poker DApp is optimized to overlay flush within the Utopia client iframe without scrolling clips. 
 
-1. **Automatic Deployments:** Because the project is linked to GitHub, Vercel will automatically trigger a new build and deploy the application every time you `git push` to your repository.
-2. **Environment Variables:** For the live web version to function, you MUST configure the Vercel project's Environment Variables (under Project Settings) to match your local `dapps/.env` file. Without defining `VITE_POKER_EXTENSION_CONFIG_ID`, `VITE_STORAGE_UNIT_ID`, `VITE_BUILDER_SCENE_PACKAGE_ID`, and `VITE_SUI_RPC_URL`, the deployed app will not be able to interact with the correct smart contracts or network.
-3. **Live URL:** The production DApp is currently accessible from: [https://eve-frontier-poker-1dvocuqkb-inclu-medias-projects.vercel.app/](https://eve-frontier-poker-1dvocuqkb-inclu-medias-projects.vercel.app/)
+1. **Automatic Deployments:** Because the project is tracked by Git, Vercel will automatically trigger a new build whenever you `git push` to `main`.
+2. **Environment Synchronization:** You **MUST** strictly copy all variables from your `dapps/.env` file directly into Vercel's Project Settings. If these Canonical IDs are omitted on tracking, the production build will fail to execute Web3 calls.
+3. **Live Injection:** Your Vercel domain URL can now be directly embedded into any initialized EVE Smart Assembly within the Utopia desktop client.
 
-## 6. Authentication Fallback
+## 5. Authentication Fallback (OAuth)
 
-The Poker DApp has dual-support for EVE Frontier zkLogin and traditional Web3 wallets (like the Sui Wallet or Martian extension). 
+The Poker DApp supports dual-login for EVE Frontier zkLogin and Web3 cryptographic wallets.
 
-If you do not have a registered EVE Frontier OAuth `CLIENT_ID` with properly configured redirect URIs, simply ensure that `VITE_EVE_OAUTH_CLIENT_ID` is empty or completely removed from your `dapps/.env` file. 
-
-When this environment variable is missing, the application will automatically bypass the EVE Frontier login flow and instead unconditionally render the standard Sui `<ConnectButton />`. This allows players to connect their Web3 wallets directly and play the Poker DApp while you sort out the custom OAuth flow credentials with CCP.
+If you do not have a registered EVE Frontier OAuth `CLIENT_ID`, simply ensure that `VITE_EVE_OAUTH_CLIENT_ID` is empty in both your local `.env` and Vercel. The application will unconditionally bypass the EVE login gate and render a standard Web3 `<ConnectButton />`, allowing testing via Sui Wallet without CCP credential approvals.
