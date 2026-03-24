@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Box, Button, Heading, Text, Flex } from "@radix-ui/themes";
 import { GearIcon } from "@radix-ui/react-icons";
-import { useCurrentAccount, useCurrentClient, useDAppKit } from "@mysten/dapp-kit-react";
+import { useCurrentAccount, useCurrentClient, useDAppKit, ConnectButton } from "@mysten/dapp-kit-react";
 import { Transaction } from "@mysten/sui/transactions";
 import { useSmartObject } from "@evefrontier/dapp-kit";
 import { useZkLogin } from "./hooks/useZkLogin";
@@ -24,10 +24,12 @@ function getCardParts(cardVal: number) {
   return { value, suit };
 }
 
+const OAUTH_CLIENT_ID = import.meta.env.VITE_EVE_OAUTH_CLIENT_ID;
+
 export function PokerTable() {
   const walletAccount = useCurrentAccount();
   const { signAndExecuteTransaction } = useDAppKit();
-  const { zkAddress, isLoggedIn: isZkLoggedIn, signAndExecuteZkTx } = useZkLogin();
+  const { zkAddress, isLoggedIn: isZkLoggedIn, signAndExecuteZkTx, beginLogin, logout, loadingAuth } = useZkLogin();
   const suiClient = useCurrentClient();
 
   const activeAddress = isZkLoggedIn ? zkAddress : walletAccount?.address;
@@ -532,7 +534,7 @@ export function PokerTable() {
         </Box>
       </Box>
 
-      <Box style={{ minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "space-between", marginBottom: "20px" }}>
+      <Box style={{ padding: "0 16px", minHeight: "220px", display: "flex", flexDirection: "column", justifyContent: "space-between", marginBottom: "20px" }}>
 
         {/* TOP: Result Section (Always 32px or empty) */}
         <Box style={{ minHeight: "42px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
@@ -637,62 +639,93 @@ export function PokerTable() {
         )}
       </Box>
 
+      {/* NEW WALLET BUTTON BLOCK */}
+      <Box mt="3">
+        {OAUTH_CLIENT_ID ? (
+          isLoggedIn ? (
+            <Button 
+              onClick={logout}
+              className="eve-glitch-hover"
+              style={{ width: "100%", padding: "10px", background: "#111", border: "1px solid var(--color-hostile-red, #ff0000)", color: "var(--color-hostile-red, #ff0000)", cursor: "pointer", fontFamily: "'Space Mono', monospace", borderRadius: "0px", textTransform: "uppercase", fontWeight: "bold" }}
+            >
+              DISCONNECT {activeAddress?.slice(0, 6)}...{activeAddress?.slice(-4)}
+            </Button>
+          ) : (
+            <Button 
+              onClick={beginLogin}
+              disabled={loadingAuth}
+              className="eve-glitch-hover"
+              style={{ width: "100%", padding: "10px", background: "#111", border: "1px solid var(--color-matrix-green, #00ffcc)", color: "var(--color-matrix-green, #00ffcc)", cursor: "pointer", fontFamily: "'Space Mono', monospace", borderRadius: "0px", textTransform: "uppercase", fontWeight: "bold" }} 
+            >
+              {loadingAuth ? "AUTHENTICATING..." : "EVE FRONTIER LOGIN"}
+            </Button>
+          )
+        ) : (
+          <Box style={{ width: "100%", display: "flex" }} className="eve-glitch-hover">
+            <ConnectButton 
+              style={{ width: "100%", padding: "10px", background: "#111", border: "1px solid var(--color-frontier-orange, #ff6b00)", color: "var(--color-frontier-orange, #ff6b00)", cursor: "pointer", fontFamily: "'Space Mono', monospace", borderRadius: "0px", textTransform: "uppercase", fontWeight: "bold" }} 
+            />
+          </Box>
+        )}
+      </Box>
+
       {/* NEW ADMIN PANEL */}
       {isOwner && (
-        <Box style={{ marginTop: "20px", border: "1px solid var(--color-frontier-orange)", padding: "16px", background: "var(--color-background)", fontFamily: "'Space Mono', monospace", position: "relative" }}>
-
-          {ownerCapId && (
-            <Button
-              onClick={async () => {
-                try {
-                  const txb = new Transaction();
-                  const worldPkg = import.meta.env.VITE_EVE_WORLD_PACKAGE_ID || "0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75";
-                  const authType = `${pkgId}::config::XAuth`;
-                  
-                  const [storageUnitOwnerCap, returnReceipt] = txb.moveCall({
-                    target: `${worldPkg}::character::borrow_owner_cap`,
-                    typeArguments: [`${worldPkg}::storage_unit::StorageUnit`],
-                    arguments: [txb.object(characterId), txb.object(ownerCapId)],
-                  });
-
-                  txb.moveCall({
-                    target: `${worldPkg}::storage_unit::authorize_extension`,
-                    typeArguments: [authType],
-                    arguments: [txb.object(storageUnitId), storageUnitOwnerCap],
-                  });
-
-                  txb.moveCall({
-                    target: `${worldPkg}::character::return_owner_cap`,
-                    typeArguments: [`${worldPkg}::storage_unit::StorageUnit`],
-                    arguments: [txb.object(characterId), storageUnitOwnerCap, returnReceipt],
-                  });
-
-                  if (isZkLoggedIn) {
-                    txb.setSender(activeAddress!);
-                    const txBytes = await txb.build({ client: suiClient });
-                    await signAndExecuteZkTx(txBytes);
-                  } else {
-                    await signAndExecuteTransaction({ transaction: txb });
-                  }
-                  setMessage("AUTHORIZATION GRANTED!");
-                } catch (e: any) {
-                  setMessage("AUTH ERROR: " + (e?.message || String(e)));
-                }
-              }}
-              style={{ position: "absolute", top: "16px", right: "16px", background: "var(--color-gunmetal)", color: "var(--color-frontier-orange)", border: "1px solid var(--color-frontier-orange)", padding: "4px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
-              className="eve-glitch-hover"
-            >
-              AUTHORIZE DAPP
-            </Button>
-          )}
+        <Box style={{ marginTop: 0, border: "1px solid var(--color-frontier-orange)", borderTop: "none", padding: "16px", background: "var(--color-background)", fontFamily: "'Space Mono', monospace" }}>
 
           <Box mb="4">
-            <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>House Open Storage</h2>
+            <Flex align="center" style={{ width: "100%", display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+              <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", textTransform: "uppercase" }}>House Open Storage</h2>
+              {ownerCapId && (
+                <Button
+                  onClick={async () => {
+                    try {
+                      const txb = new Transaction();
+                      const worldPkg = import.meta.env.VITE_EVE_WORLD_PACKAGE_ID || "0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75";
+                      const authType = `${pkgId}::config::XAuth`;
+                      
+                      const [storageUnitOwnerCap, returnReceipt] = txb.moveCall({
+                        target: `${worldPkg}::character::borrow_owner_cap`,
+                        typeArguments: [`${worldPkg}::storage_unit::StorageUnit`],
+                        arguments: [txb.object(characterId), txb.object(ownerCapId)],
+                      });
+
+                      txb.moveCall({
+                        target: `${worldPkg}::storage_unit::authorize_extension`,
+                        typeArguments: [authType],
+                        arguments: [txb.object(storageUnitId), storageUnitOwnerCap],
+                      });
+
+                      txb.moveCall({
+                        target: `${worldPkg}::character::return_owner_cap`,
+                        typeArguments: [`${worldPkg}::storage_unit::StorageUnit`],
+                        arguments: [txb.object(characterId), storageUnitOwnerCap, returnReceipt],
+                      });
+
+                      if (isZkLoggedIn) {
+                        txb.setSender(activeAddress!);
+                        const txBytes = await txb.build({ client: suiClient });
+                        await signAndExecuteZkTx(txBytes);
+                      } else {
+                        await signAndExecuteTransaction({ transaction: txb });
+                      }
+                      setMessage("AUTHORIZATION GRANTED!");
+                    } catch (e: any) {
+                      setMessage("AUTH ERROR: " + (e?.message || String(e)));
+                    }
+                  }}
+                  style={{ background: "var(--color-gunmetal)", color: "var(--color-frontier-orange)", border: "1px solid var(--color-frontier-orange)", padding: "4px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
+                  className="eve-glitch-hover"
+                >
+                  AUTHORIZE DAPP
+                </Button>
+              )}
+            </Flex>
             {houseFuelsList.length > 0 ? houseFuelsList.map((f: any) => (
-              <Flex key={f.id} justify="between" align="center" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
-                <Text style={{ color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
-                <Flex align="center" gap="3">
-                  <Text style={{ color: "var(--color-matrix-green)", fontWeight: "bold" }}>{f.quantity}</Text>
+              <Flex key={f.id} align="center" style={{ width: "100%", display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--color-gunmetal)", padding: "4px 0" }}>
+                <Text size="1" style={{ color: "var(--color-frontier-orange)", fontFamily: "'Space Mono', monospace", opacity: 0.8, textTransform: "uppercase" }}>
+                  {FUEL_NAMES[f.typeId] || "Unknown"} | {f.quantity}
+                </Text>
                   <Button
                     onClick={async () => {
                       try {
@@ -723,9 +756,9 @@ export function PokerTable() {
                         setMessage("DEFUND ERROR: " + (e?.message || String(e)));
                       }
                     }}
-                    style={{ background: "var(--color-hostile-red)", color: "#000", padding: "2px 8px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
+                    className="eve-glitch-hover"
+                    style={{ background: "var(--color-gunmetal)", color: "var(--color-frontier-orange)", border: "1px solid var(--color-frontier-orange)", padding: "4px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
                   >DEFUND</Button>
-                </Flex>
               </Flex>
             )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No liquidity trapped in house.</Text>}
           </Box>
@@ -733,10 +766,10 @@ export function PokerTable() {
           <Box mb="4">
             <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>Player Regular Storage</h2>
             {regularFuelsList.length > 0 ? regularFuelsList.map((f: any) => (
-              <Flex key={f.id} justify="between" align="center" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
-                <Text style={{ color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
-                <Flex align="center" gap="3">
-                  <Text style={{ color: "var(--color-frontier-orange)", fontWeight: "bold" }}>{f.quantity}</Text>
+              <Flex key={f.id} align="center" style={{ width: "100%", display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--color-gunmetal)", padding: "4px 0" }}>
+                <Text size="1" style={{ color: "var(--color-frontier-orange)", fontFamily: "'Space Mono', monospace", opacity: 0.8, textTransform: "uppercase" }}>
+                  {FUEL_NAMES[f.typeId] || "Unknown"} | {f.quantity}
+                </Text>
                   <Button
                     onClick={async () => {
                       try {
@@ -763,9 +796,9 @@ export function PokerTable() {
                         setMessage("FUND ERROR: " + (e?.message || String(e)));
                       }
                     }}
-                    style={{ background: "var(--color-matrix-green)", color: "#000", padding: "2px 8px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
+                    className="eve-glitch-hover"
+                    style={{ background: "var(--color-gunmetal)", color: "var(--color-frontier-orange)", border: "1px solid var(--color-frontier-orange)", padding: "4px 12px", cursor: "pointer", fontSize: "10px", fontWeight: "bold" }}
                   >FUND HOUSE</Button>
-                </Flex>
               </Flex>
             )) : <Text style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>No available fuel stakes.</Text>}
           </Box>
