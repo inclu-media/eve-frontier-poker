@@ -424,7 +424,8 @@ export function PokerTable() {
   return (
     <Box className="eve-terminal poker-container eve-panel" style={{
       fontFamily: "'Space Mono', monospace",
-      width: "100%",
+      width: "calc(100% - 16px)",
+      margin: "8px",
       position: "relative"
     }}>
       {/* ADMIN OVERLAY MASK - Disabled */}
@@ -541,7 +542,7 @@ export function PokerTable() {
               Result: <b style={{ color: "var(--color-frontier-orange)" }}>{getHandName(Number(finalGameResult.multiplier))}</b>
             </Text>
           ) : gameSession ? (
-            <Text size="2" style={{ color: "var(--color-matrix-green)", textTransform: "uppercase", letterSpacing: "1px", fontStyle: "italic" }}>
+            <Text size="2" style={{ color: "var(--color-frontier-orange)", textTransform: "uppercase", letterSpacing: "1px", fontStyle: "italic" }}>
               [SELECT CARDS TO RETAIN]
             </Text>
           ) : null}
@@ -570,10 +571,10 @@ export function PokerTable() {
           {/* Render Cards */}
           {finalGameResult ? (
             [...finalGameResult.final_cards].sort((a, b) => (a % 13) - (b % 13) || Math.floor(a / 13) - Math.floor(b / 13)).map((cardVal: number, i: number) => (
-              <Box key={i} className="eve-card" style={{ border: "1px solid var(--color-gunmetal)", backgroundColor: "var(--color-background)", backgroundImage: cardVal >= 13 && cardVal <= 38 ? "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/red-bg.png')" : "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/black-bg.png')", backgroundSize: "cover", backgroundPosition: "center", width: "80px", aspectRatio: "5/7", position: "relative", borderRadius: "6px" }}>
-                <div style={{ position: "absolute", top: "8px", left: "8px", textAlign: "left", lineHeight: "1", zIndex: 20 }}>
-                  <Text size="4" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", fontWeight: "bold", display: "block" }}>{getCardParts(cardVal).value}</Text>
-                  <Text size="5" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", display: "block" }}>{getCardParts(cardVal).suit}</Text>
+              <Box key={i} className="eve-card" style={{ border: "1px solid var(--color-gunmetal)", backgroundColor: "var(--color-background)", backgroundImage: cardVal >= 13 && cardVal <= 38 ? "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/red-bg.png')" : "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/black-bg.png')", backgroundSize: "cover", backgroundPosition: "center", width: "100px", aspectRatio: "5/7", position: "relative", borderRadius: "6px" }}>
+                <div style={{ position: "absolute", top: "10px", left: "10px", textAlign: "left", lineHeight: "1", zIndex: 20 }}>
+                  <Text size="5" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", fontWeight: "bold", display: "block" }}>{getCardParts(cardVal).value}</Text>
+                  <Text size="6" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", display: "block" }}>{getCardParts(cardVal).suit}</Text>
                 </div>
               </Box>
             ))
@@ -581,10 +582,10 @@ export function PokerTable() {
             getCardsArray().map((cardVal: number, i: number) => ({ cardVal, originalIndex: i }))
               .sort((a, b) => (a.cardVal % 13) - (b.cardVal % 13) || Math.floor(a.cardVal / 13) - Math.floor(b.cardVal / 13))
               .map(({ cardVal, originalIndex }) => (
-                <Box key={originalIndex} className="eve-card eve-glitch-hover" onClick={() => toggleHold(originalIndex)} style={{ border: `1px solid ${heldCards.includes(originalIndex) ? "var(--color-frontier-orange)" : "var(--color-gunmetal)"}`, cursor: "pointer", backgroundColor: heldCards.includes(originalIndex) ? "var(--color-charcoal)" : "var(--color-background)", backgroundImage: cardVal >= 13 && cardVal <= 38 ? (heldCards.includes(originalIndex) ? "linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('/red-bg.png')" : "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/red-bg.png')") : (heldCards.includes(originalIndex) ? "linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('/black-bg.png')" : "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/black-bg.png')"), backgroundSize: "cover", backgroundPosition: "center", transition: "all 0.2s", width: "80px", aspectRatio: "5/7", position: "relative", borderRadius: "6px", transform: heldCards.includes(originalIndex) ? "scale(0.95)" : "scale(1)", boxShadow: heldCards.includes(originalIndex) ? "inset 0 0 15px var(--color-orange-glow)" : "none" }}>
-                  <div style={{ position: "absolute", top: "8px", left: "8px", textAlign: "left", lineHeight: "1", zIndex: 20 }}>
-                    <Text size="4" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", fontWeight: "bold", display: "block" }}>{getCardParts(cardVal).value}</Text>
-                    <Text size="5" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", display: "block" }}>{getCardParts(cardVal).suit}</Text>
+                <Box key={originalIndex} className="eve-card eve-glitch-hover" onClick={() => toggleHold(originalIndex)} style={{ border: `1px solid ${heldCards.includes(originalIndex) ? "var(--color-frontier-orange)" : "var(--color-gunmetal)"}`, cursor: "pointer", backgroundColor: heldCards.includes(originalIndex) ? "var(--color-charcoal)" : "var(--color-background)", backgroundImage: cardVal >= 13 && cardVal <= 38 ? (heldCards.includes(originalIndex) ? "linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('/red-bg.png')" : "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/red-bg.png')") : (heldCards.includes(originalIndex) ? "linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('/black-bg.png')" : "linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)), url('/black-bg.png')"), backgroundSize: "cover", backgroundPosition: "center", transition: "all 0.2s", width: "100px", aspectRatio: "5/7", position: "relative", borderRadius: "6px", transform: heldCards.includes(originalIndex) ? "scale(0.95)" : "scale(1)", boxShadow: heldCards.includes(originalIndex) ? "inset 0 0 15px var(--color-orange-glow)" : "none" }}>
+                  <div style={{ position: "absolute", top: "10px", left: "10px", textAlign: "left", lineHeight: "1", zIndex: 20 }}>
+                    <Text size="5" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", fontWeight: "bold", display: "block" }}>{getCardParts(cardVal).value}</Text>
+                    <Text size="6" style={{ color: cardVal >= 13 && cardVal <= 38 ? "var(--color-hostile-red)" : "var(--color-text-muted)", display: "block" }}>{getCardParts(cardVal).suit}</Text>
                   </div>
                 </Box>
               ))
