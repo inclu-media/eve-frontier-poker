@@ -21,7 +21,7 @@ async function main() {
         const adminCapId = requireEnv("POKER_ADMIN_CAP_ID");
 
         // Testnet Fuel Type IDs configured for Poker
-        const fuelTypeIds = [77818n, 78437n, 78515n, 78516n];
+        const fuelTypeIds = [77818n, 78437n, 78515n, 78516n, 84868n, 88319n, 88335n];
 
         console.log("-> Adding Multiple Fuel Types to the Poker Config Whitelist...");
         const adminTx = new Transaction();

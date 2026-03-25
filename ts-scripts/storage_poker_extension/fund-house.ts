@@ -66,7 +66,7 @@ async function main() {
         });
 
         // Testnet Fuel Type IDs configured for Poker
-        const fuelTypeIds = [77818n, 78437n, 78515n, 78516n];
+        const fuelTypeIds = [77818n, 78437n, 78515n, 78516n, 84868n, 88319n, 88335n];
         let withdrawnItems = [];
 
         for (let i = 0; i < fuelTypeIds.length; i++) {

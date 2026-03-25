@@ -13,7 +13,10 @@ const FUEL_NAMES: Record<string, string> = {
   "77818": "Unstable Fuel",
   "78437": "EU-90 Fuel",
   "78515": "SOF-80 Fuel",
-  "78516": "EU-40 Fuel"
+  "78516": "EU-40 Fuel",
+  "84868": "SOF-40 Fuel",
+  "88319": "D2 Fuel",
+  "88335": "D1 Fuel"
 };
 
 function getCardParts(cardVal: number) {
