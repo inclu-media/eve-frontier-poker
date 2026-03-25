@@ -835,9 +835,6 @@ export function PokerTable() {
               <Text size="1" style={{ color: "var(--color-frontier-orange)", display: "block", fontSize: "10px", opacity: 0.7, lineHeight: 1, margin: 0, padding: 0 }}>
                 SYS {">"} {message.toUpperCase()}
               </Text>
-              <Text size="1" style={{ color: "var(--color-frontier-orange)", display: "block", fontSize: "10px", opacity: 0.7, lineHeight: 1, margin: 0, padding: 0, wordBreak: "break-all" }}>
-                URL {">"} {typeof window !== "undefined" && window.location.search ? window.location.search.substring(1) : "NONE"}
-              </Text>
             </Box>
           </Box>
 

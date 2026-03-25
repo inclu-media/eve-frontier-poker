@@ -18,7 +18,8 @@ The core logic resides in the `poker.move` smart assembly. You must deploy your 
    sui client switch --env testnet
    sui client publish
    ```
-4. **Update Environment Variables:** Immediately paste these three Object IDs into your `.env` files.
+3. Upon deployment, record the resulting **Package ID** and the **ExtensionConfig ID** created by the initialization function.
+4. **Update Environment Variables:** Immediately paste these two Object IDs into your `.env` files.
 5. **Whitelist Fuels:** You must configure the `PokerConfig` to whitelist acceptable fuel bindings. Run the configuration script from the root directory:
    ```bash
    npx tsx ts-scripts/storage_poker_extension/configure-rules.ts
@@ -36,7 +37,6 @@ VITE_EVE_WORLD_PACKAGE_ID=0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00
 
 VITE_BUILDER_SCENE_PACKAGE_ID=<Your Deployed Poker Package ID>
 VITE_POKER_EXTENSION_CONFIG_ID=<Your ExtensionConfig Object ID>
-VITE_POKER_ADMIN_CAP_ID=<Your AdminCap Object ID>
 
 VITE_STORAGE_UNIT_ID=<Your Target Smart Assembly / Storage Unit Object ID>
 VITE_CHARACTER_ID=<Your Game Character Object ID Fallback>
