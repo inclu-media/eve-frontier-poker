@@ -18,8 +18,12 @@ The core logic resides in the `poker.move` smart assembly. You must deploy your 
    sui client switch --env testnet
    sui client publish
    ```
-3. Upon deployment, record the resulting **Package ID**, the **AdminCap ID**, and the **ExtensionConfig ID** created by the initialization function.
-4. **Whitelist Fuels:** Use the Sui CLI (or the legacy `poker-flow.ts` script) to link your supported Fuel definitions (like EU-90) into the newly created `PokerConfig`.
+4. **Update Environment Variables:** Immediately paste these three Object IDs into your `.env` files.
+5. **Whitelist Fuels:** You must configure the `PokerConfig` to whitelist acceptable fuel bindings. Run the configuration script from the root directory:
+   ```bash
+   npx tsx ts-scripts/storage_poker_extension/configure-rules.ts
+   ```
+6. **Re-authorize DApp:** If you have just re-published the contract to update it, you **must** open the DApp in your browser and click **AUTHORIZE DAPP** again to grant permissions to the new package.
 
 ## 2. Environment Variables (`dapps/.env`)
 

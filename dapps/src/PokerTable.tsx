@@ -10,12 +10,10 @@ const SUITS = ["♠", "♥", "♦", "♣"];
 const VALUES = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
 
 const FUEL_NAMES: Record<string, string> = {
-  "78437": "Unstable Fuel",
-  "78515": "D1 Fuel",
-  "78516": "D2 Fuel",
-  "84868": "SOF-40 Fuel",
-  "88319": "EU-40 Fuel",
-  "88335": "EU-90 Fuel"
+  "77818": "Unstable Fuel",
+  "78437": "EU-90 Fuel",
+  "78515": "SOF-80 Fuel",
+  "78516": "EU-40 Fuel"
 };
 
 function getCardParts(cardVal: number) {

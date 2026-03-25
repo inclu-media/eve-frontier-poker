@@ -33,7 +33,7 @@ async function main() {
         // 1. Configure Poker Rules (Admin Action)
         // ---------------------------------------------------------
         // Testnet Fuel Type IDs provided by the user
-        const fuelTypeIds = [78437n, 78515n, 78516n, 84868n, 88319n, 88335n];
+        const fuelTypeIds = [77818n, 78437n, 78515n, 78516n];
 
         console.log("1. Configuring poker rules to accept multiple fuel types as Admin...");
         const adminTx = new Transaction();

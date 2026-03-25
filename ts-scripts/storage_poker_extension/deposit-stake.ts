@@ -40,7 +40,7 @@ async function main() {
         }
 
         // Testnet Fuel Type IDs configured for Poker
-        const fuelTypeIds = [78437n, 78515n, 78516n, 84868n, 88319n, 88335n];
+        const fuelTypeIds = [77818n, 78437n, 78515n, 78516n];
 
         console.log(`Depositing 10 units of all ${fuelTypeIds.length} Fuel components directly to the Storage Unit as stakes...`);
 
