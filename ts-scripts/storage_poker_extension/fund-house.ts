@@ -129,7 +129,7 @@ async function main() {
         // ==========================
         // TRANSACTION 2: FUND HOUSE
         // ==========================
-        console.log("-> Depositing Liquidity into the Poker House Open Storage...");
+        console.log("-> Depositing Liquidity into the Poker House...");
         const txFund = new Transaction();
         // This transaction must be sent by the Admin to use the AdminCap
         txFund.setSender(adminAddress);

@@ -437,7 +437,7 @@ export function PokerTable() {
           </Flex>
 
           <Box mb="5">
-            <Heading size="3" style={{ color: "var(--color-matrix-green)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>House Open Storage</Heading>
+            <Heading size="3" style={{ color: "var(--color-matrix-green)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>House</Heading>
             {houseFuelsList.length > 0 ? houseFuelsList.map(f => (
               <Flex key={f.id} justify="between" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
                 <Text style={{ fontFamily: "'Space Mono', monospace", color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
@@ -447,7 +447,7 @@ export function PokerTable() {
           </Box>
 
           <Box mb="5">
-            <Heading size="3" style={{ color: "var(--color-frontier-orange)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>Player Regular Storage</Heading>
+            <Heading size="3" style={{ color: "var(--color-frontier-orange)", marginBottom: "10px", letterSpacing: "1px", textTransform: "uppercase" }}>Storage Unit</Heading>
             {regularFuelsList.length > 0 ? regularFuelsList.map(f => (
               <Flex key={f.id} justify="between" align="center" style={{ borderBottom: "1px dashed var(--color-gunmetal)", padding: "8px 0" }}>
                 <Text style={{ fontFamily: "'Space Mono', monospace", color: "#ccc" }}>{FUEL_NAMES[f.typeId] || "Unknown"}</Text>
@@ -678,7 +678,7 @@ export function PokerTable() {
 
           <Box mb="4">
             <Flex align="center" style={{ width: "100%", display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-              <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", textTransform: "uppercase" }}>House Open Storage</h2>
+              <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", textTransform: "uppercase" }}>House</h2>
               {ownerCapId && (
                 <Button
                   onClick={async () => {
@@ -767,7 +767,7 @@ export function PokerTable() {
           </Box>
 
           <Box mb="4">
-            <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>Player Regular Storage</h2>
+            <h2 style={{ fontSize: "22px", margin: 0, color: "var(--color-text-muted)", marginBottom: "8px", textTransform: "uppercase" }}>Storage Unit</h2>
             {regularFuelsList.length > 0 ? regularFuelsList.map((f: any) => (
               <Flex key={f.id} align="center" style={{ width: "100%", display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--color-gunmetal)", padding: "4px 0" }}>
                 <Text size="1" style={{ color: "var(--color-frontier-orange)", fontFamily: "'Space Mono', monospace", opacity: 0.8, textTransform: "uppercase" }}>
