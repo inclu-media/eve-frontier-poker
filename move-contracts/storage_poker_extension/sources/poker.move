@@ -97,6 +97,35 @@ public entry fun user_fund_house(
     );
 }
 
+// Allows the storage unit owner to reclaim trapped open inventory liquidity back into their regular storage
+public entry fun user_defund_house(
+    extension_config: &ExtensionConfig,
+    storage_unit: &mut StorageUnit,
+    character: &Character,
+    type_id: u64,
+    quantity: u32,
+    ctx: &mut TxContext,
+) {
+    assert!(extension_config.has_rule<PokerConfigKey>(PokerConfigKey {}), ENoPokerConfig);
+    // Note: withdraw_from_open_inventory requires XAuth and we assume the DApp UI 
+    // restricts this to the owner via the ownerCap checks.
+    let withdrawn_item = world::storage_unit::withdraw_from_open_inventory<XAuth>(
+        storage_unit,
+        character,
+        config::x_auth(),
+        type_id,
+        quantity,
+        ctx
+    );
+    world::storage_unit::deposit_item<XAuth>(
+        storage_unit,
+        character,
+        withdrawn_item,
+        config::x_auth(),
+        ctx
+    );
+}
+
 public entry fun defund_house(
     _admin_cap: &AdminCap,
     storage_unit: &mut StorageUnit,

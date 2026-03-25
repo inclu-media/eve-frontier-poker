@@ -8,12 +8,14 @@ The core logic resides in the `poker.move` smart assembly. You must deploy your 
 
 1. Navigate to the contract directory and build the assembly using the Sui CLI:
    ```bash
+   sui client switch --env testnet
    cd move-contracts/storage_poker_extension
    sui move build
    ```
 2. Publish the package specifically targeting the `official-testnet` environment:
+   If necessary, delete Published.toml first.
    ```bash
-   sui client switch --env official-testnet
+   sui client switch --env testnet
    sui client publish
    ```
 3. Upon deployment, record the resulting **Package ID**, the **AdminCap ID**, and the **ExtensionConfig ID** created by the initialization function.

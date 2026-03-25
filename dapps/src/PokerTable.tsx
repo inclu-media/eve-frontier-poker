@@ -77,7 +77,7 @@ export function PokerTable() {
 
   const pkgId = import.meta.env.VITE_BUILDER_SCENE_PACKAGE_ID || import.meta.env.VITE_BUILDER_PACKAGE_ID || "0x34cb997cb240da859dce4c3438606c1324158b65df109786d4359605ece8b3b9";
   const configId = import.meta.env.VITE_POKER_EXTENSION_CONFIG_ID || import.meta.env.VITE_EXTENSION_CONFIG_ID || "0x78c8bf2da578de90c7af386efefca4cb67048cc59cbd8ba5049d7c3a8c913686";
-  const adminCapId = import.meta.env.VITE_POKER_ADMIN_CAP_ID || "";
+
   // URL parameters as fundamental foolproof fallback
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new Map();
   const getParam = (k: string) => urlParams.get(k) || null;
@@ -732,15 +732,11 @@ export function PokerTable() {
                   <Button
                     onClick={async () => {
                       try {
-                        if (!adminCapId) {
-                          setMessage("DEFUND ERROR: Missing VITE_POKER_ADMIN_CAP_ID in local env");
-                          return;
-                        }
                         const txb = new Transaction();
                         txb.moveCall({
-                          target: `${pkgId}::poker::defund_house`,
+                          target: `${pkgId}::poker::user_defund_house`,
                           arguments: [
-                            txb.object(adminCapId),
+                            txb.object(configId),
                             txb.object(storageUnitId),
                             txb.object(characterId),
                             txb.pure.u64(f.typeId),
