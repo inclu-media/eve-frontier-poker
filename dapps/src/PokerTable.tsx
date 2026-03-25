@@ -277,10 +277,13 @@ export function PokerTable() {
       const targetFuelRecord = availableFuels.find((f: any) => f.id === selectedFuelId);
       const stakeQty = targetFuelRecord ? Number(targetFuelRecord.quantity) : 1;
 
-      let actualStake = stakeQty;
-      if (maxStake !== null && actualStake > maxStake) {
-        actualStake = maxStake;
+      if (maxStake !== null && stakeQty > maxStake) {
+        setMessage("ERROR: Selected stake exceeds maximum house payout.");
+        setLoading(false);
+        return;
       }
+
+      const actualStake = stakeQty;
 
       const txb = new Transaction();
 
@@ -638,9 +641,18 @@ export function PokerTable() {
           <Button className="eve-glitch-hover" onClick={() => { setFinalGameResult(null); setMessage("Waiting for next hand..."); setHeldCards([]); setRefreshTrigger(prev => prev + 1); }} style={{ width: "100%", background: "var(--color-button-background)", border: "1px solid var(--color-frontier-orange)", color: "var(--color-frontier-orange)", cursor: "pointer", fontWeight: "bold" }}>PLAY AGAIN</Button>
         ) : gameSession ? (
           <Button className="eve-glitch-hover" disabled={loading} onClick={throwCards} style={{ width: "100%", background: "var(--color-frontier-orange)", border: "1px solid var(--color-frontier-orange)", color: "#000", cursor: "pointer", fontWeight: "bold" }}>{loading ? "PROCESSING..." : "DRAW & RESOLVE"}</Button>
-        ) : (
-          <Button className="eve-glitch-hover" disabled={loading || !isLoggedIn || !selectedFuelId || maxStake === 0} onClick={dealCards} style={{ width: "100%", background: "var(--color-button-background)", border: `1px solid ${maxStake === 0 ? "var(--color-hostile-red)" : "var(--color-frontier-orange)"}`, color: maxStake === 0 ? "var(--color-hostile-red)" : "var(--color-frontier-orange)", cursor: maxStake === 0 ? "not-allowed" : "pointer", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>{loading ? "INITIALIZING..." : !isLoggedIn ? "CONNECT WALLET" : (maxStake === 0 ? "HOUSE FUNDS DEPLETED" : "DEAL STAKE")}</Button>
-        )}
+        ) : (() => {
+          const selectedFuelRecord = availableFuels.find(f => f.id === selectedFuelId);
+          const selectedStakeQty = selectedFuelRecord ? Number(selectedFuelRecord.quantity) : 0;
+          const isInsufficient = maxStake !== null && selectedStakeQty > maxStake;
+          const isDisabled = loading || !isLoggedIn || !selectedFuelId || maxStake === 0 || isInsufficient;
+          const buttonColor = (maxStake === 0 || isInsufficient) ? "var(--color-hostile-red)" : "var(--color-frontier-orange)";
+          const buttonText = loading ? "INITIALIZING..." : !isLoggedIn ? "CONNECT WALLET" : (maxStake === 0 ? "HOUSE FUNDS DEPLETED" : isInsufficient ? "NOT ENOUGH HOUSE FUND" : "DEAL STAKE");
+
+          return (
+            <Button className="eve-glitch-hover" disabled={isDisabled} onClick={dealCards} style={{ width: "100%", background: "var(--color-button-background)", border: `1px solid ${buttonColor}`, color: buttonColor, cursor: isDisabled ? "not-allowed" : "pointer", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>{buttonText}</Button>
+          );
+        })()}
       </Box>
 
       {/* NEW WALLET BUTTON BLOCK */}
