@@ -535,9 +535,7 @@ export function PokerTable() {
             )
           ) : (
             <Box className="eve-glitch-hover">
-              <ConnectButton 
-                style={{ padding: "6px 10px", background: "rgba(0,0,0,0.8)", border: "1px solid var(--color-frontier-orange, #ff6b00)", color: "var(--color-frontier-orange, #ff6b00)", cursor: "pointer", fontFamily: "'Space Mono', monospace", borderRadius: "0px", fontSize: "10px", textTransform: "uppercase", fontWeight: "bold", minHeight: "auto", height: "auto" }} 
-              />
+              <ConnectButton className="eve-custom-connect-btn" />
             </Box>
           )}
         </Box>
