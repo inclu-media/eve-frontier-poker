@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Box, Button, Heading, Text, Flex } from "@radix-ui/themes";
-import { GearIcon } from "@radix-ui/react-icons";
+import { Box, Text, Flex, Heading, Button } from "@radix-ui/themes";
 import { useCurrentAccount, useCurrentClient, useDAppKit, ConnectButton } from "@mysten/dapp-kit-react";
 import { Transaction } from "@mysten/sui/transactions";
 import { useSmartObject } from "@evefrontier/dapp-kit";
@@ -514,15 +513,34 @@ export function PokerTable() {
         <Heading size="6" style={{ letterSpacing: "4px", textTransform: "uppercase", color: "var(--color-frontier-orange)", position: "relative", zIndex: 1 }}>BURN :: RATE</Heading>
         <Text size="2" style={{ letterSpacing: "2px", textTransform: "uppercase", color: "var(--color-text-muted)", position: "relative", zIndex: 1, display: "block", marginTop: "4px" }}>Fuel Poker</Text>
 
-        {false && (
-          <Button
-            onClick={() => undefined}
-            variant="ghost"
-            style={{ position: "absolute", top: "12px", right: "20px", color: "var(--color-frontier-orange)", cursor: "pointer", zIndex: 10, padding: 0 }}
-          >
-            <GearIcon width="24" height="24" />
-          </Button>
-        )}
+        <Box style={{ position: "absolute", top: "12px", right: "20px", zIndex: 10 }}>
+          {OAUTH_CLIENT_ID ? (
+            isLoggedIn ? (
+              <Button 
+                onClick={logout}
+                className="eve-glitch-hover"
+                style={{ padding: "4px 8px", background: "rgba(0,0,0,0.8)", border: "1px solid var(--color-hostile-red, #ff0000)", color: "var(--color-hostile-red, #ff0000)", cursor: "pointer", fontFamily: "'Space Mono', monospace", borderRadius: "0px", fontSize: "10px", textTransform: "uppercase", fontWeight: "bold" }}
+              >
+                DISCONNECT {activeAddress?.slice(0, 4)}...
+              </Button>
+            ) : (
+              <Button 
+                onClick={beginLogin}
+                disabled={loadingAuth}
+                className="eve-glitch-hover"
+                style={{ padding: "4px 8px", background: "rgba(0,0,0,0.8)", border: "1px solid var(--color-matrix-green, #00ffcc)", color: "var(--color-matrix-green, #00ffcc)", cursor: "pointer", fontFamily: "'Space Mono', monospace", borderRadius: "0px", fontSize: "10px", textTransform: "uppercase", fontWeight: "bold" }} 
+              >
+                {loadingAuth ? "AUTH..." : "EVE LOGIN"}
+              </Button>
+            )
+          ) : (
+            <Box className="eve-glitch-hover">
+              <ConnectButton 
+                style={{ padding: "6px 10px", background: "rgba(0,0,0,0.8)", border: "1px solid var(--color-frontier-orange, #ff6b00)", color: "var(--color-frontier-orange, #ff6b00)", cursor: "pointer", fontFamily: "'Space Mono', monospace", borderRadius: "0px", fontSize: "10px", textTransform: "uppercase", fontWeight: "bold", minHeight: "auto", height: "auto" }} 
+              />
+            </Box>
+          )}
+        </Box>
 
         <Box style={{ position: "absolute", bottom: "12px", right: "20px", textAlign: "right", zIndex: 1 }}>
           <Text
@@ -655,35 +673,6 @@ export function PokerTable() {
         })()}
       </Box>
 
-      {/* NEW WALLET BUTTON BLOCK */}
-      <Box mt="3">
-        {OAUTH_CLIENT_ID ? (
-          isLoggedIn ? (
-            <Button 
-              onClick={logout}
-              className="eve-glitch-hover"
-              style={{ width: "100%", padding: "10px", background: "#111", border: "1px solid var(--color-hostile-red, #ff0000)", color: "var(--color-hostile-red, #ff0000)", cursor: "pointer", fontFamily: "'Space Mono', monospace", borderRadius: "0px", textTransform: "uppercase", fontWeight: "bold" }}
-            >
-              DISCONNECT {activeAddress?.slice(0, 6)}...{activeAddress?.slice(-4)}
-            </Button>
-          ) : (
-            <Button 
-              onClick={beginLogin}
-              disabled={loadingAuth}
-              className="eve-glitch-hover"
-              style={{ width: "100%", padding: "10px", background: "#111", border: "1px solid var(--color-matrix-green, #00ffcc)", color: "var(--color-matrix-green, #00ffcc)", cursor: "pointer", fontFamily: "'Space Mono', monospace", borderRadius: "0px", textTransform: "uppercase", fontWeight: "bold" }} 
-            >
-              {loadingAuth ? "AUTHENTICATING..." : "EVE FRONTIER LOGIN"}
-            </Button>
-          )
-        ) : (
-          <Box style={{ width: "100%", display: "flex" }} className="eve-glitch-hover">
-            <ConnectButton 
-              style={{ width: "100%", padding: "10px", background: "#111", border: "1px solid var(--color-frontier-orange, #ff6b00)", color: "var(--color-frontier-orange, #ff6b00)", cursor: "pointer", fontFamily: "'Space Mono', monospace", borderRadius: "0px", textTransform: "uppercase", fontWeight: "bold" }} 
-            />
-          </Box>
-        )}
-      </Box>
 
       {/* NEW ADMIN PANEL */}
       {isOwner && (
