@@ -12,7 +12,6 @@ import {
  * Other helpers: executeGraphQLQuery, getOwnedObjectsByType, getObjectsByType, getSingletonObjectByType.
  */
 async function fetchAssemblyInfo(assemblyId: string) {
-  console.log("Fetching Assembly details...");
   const { moveObject, assemblyOwner } = await getAssemblyWithOwner(assemblyId);
 
   if (!moveObject) {
@@ -20,16 +19,10 @@ async function fetchAssemblyInfo(assemblyId: string) {
     return null;
   }
 
-  // 2. Access raw JSON data directly
-  const rawJson = moveObject.contents.json;
-  console.log("Raw assembly data:", rawJson);
-  console.log("Assembly owner:", assemblyOwner);
-
   // 3. Or transform to typed Assembly object
   const assembly = await transformToAssembly(assemblyId, moveObject, {
     character: assemblyOwner,
   });
-  console.log("Transformed assembly:", assembly);
 
   return { assembly, assemblyOwner };
 }
@@ -39,11 +32,6 @@ async function fetchObjectData(objectId: string) {
   const result = await getObjectWithJson(objectId);
 
   const json = result.data?.object?.asMoveObject?.contents?.json;
-  const type = result.data?.object?.asMoveObject?.contents?.type?.repr;
-
-  console.log("Object type:", type);
-  console.log("Object data:", json);
-
   return json;
 }
 
@@ -57,8 +45,6 @@ async function fetchUserAssemblies(
   const objectAddresses = result.data?.address?.objects?.nodes.map(
     (node) => node.address,
   );
-
-  console.log("Owned object addresses:", objectAddresses);
   return objectAddresses;
 }
 

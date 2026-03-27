@@ -15,7 +15,6 @@ The core logic resides in the `poker.move` smart assembly. You must deploy your 
 2. Publish the package specifically targeting the `official-testnet` environment:
    If necessary, delete Published.toml first.
    ```bash
-   sui client switch --env testnet
    sui client publish
    ```
 3. Upon deployment, record the resulting **Package ID** and the **ExtensionConfig ID** created by the initialization function.
@@ -70,3 +69,11 @@ The Poker DApp is optimized to overlay flush within the Utopia client iframe wit
 The Poker DApp supports dual-login for EVE Frontier zkLogin and Web3 cryptographic wallets.
 
 If you do not have a registered EVE Frontier OAuth `CLIENT_ID`, simply ensure that `VITE_EVE_OAUTH_CLIENT_ID` is empty in both your local `.env` and Vercel. The application will unconditionally bypass the EVE login gate and render a standard Web3 `<ConnectButton />`, allowing testing via Sui Wallet without CCP credential approvals.
+
+## 6. Known UI Integration Quirks (Hackathon Judges Info)
+
+When using the Storage Unit as the physical backend for this extension, you may notice that the open inventory (house fund) and your personal inventory visually intermix within the EVE Frontier game client. 
+
+This occurs because both regular deposits (`deposit_item`) and hidden escrow deposits (`deposit_to_open_inventory`) fire the exact same `ItemDepositedEvent` at the core primitive level. The game client currently cannot distinguish which internal storage key received the items, so it eagerly renders all deposits into the visible regular storage interface.
+
+This incorrect display is purely a frontend visual artifact and does not affect the actual on-chain security of the funds. The display will persist until you close the smart assembly interface (ESC) and reopen it (F) to force a hard state synchronization.

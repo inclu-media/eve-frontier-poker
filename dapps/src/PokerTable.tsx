@@ -217,7 +217,7 @@ export function PokerTable() {
         }
 
       } catch (err: any) {
-        console.log(`CATCH_ERR: ${err.message}`);
+        console.error(`CATCH_ERR: ${err.message}`);
         setMaxStake(0);
         setAvailableFuels([]);
       }
@@ -306,7 +306,6 @@ export function PokerTable() {
         await signAndExecuteTransaction({ transaction: txb });
       }
 
-      console.log("Dealt cards");
       refreshSession();
       setLoading(false);
     } catch (e) {
@@ -371,8 +370,6 @@ export function PokerTable() {
       }).then(r => r.json());
 
       const txDetails = rpcResponse.result;
-
-      console.log("Threw cards", txDetails);
 
       const resolvedEvent = txDetails.events?.find((e: any) => e.type.includes("::poker::HandResolved"));
       if (resolvedEvent) {
