@@ -655,7 +655,7 @@ export function PokerTable() {
         ) : gameSession ? (
           <Button className="eve-glitch-hover" disabled={loading} onClick={throwCards} style={{ width: "100%", background: "var(--color-frontier-orange)", border: "1px solid var(--color-frontier-orange)", color: "#000", cursor: "pointer", fontWeight: "bold" }}>{loading ? "PROCESSING..." : "DRAW & RESOLVE"}</Button>
         ) : (() => {
-          const isOffline = assembly !== undefined && assembly.state !== undefined && assembly.state !== 1 && assembly.state !== "ONLINE";
+          const isOffline = Boolean(assembly && assembly.state !== undefined && assembly.state !== 1 && assembly.state !== "ONLINE");
           const noStake = availableFuels.length === 0 || !selectedFuelId;
           const selectedFuelRecord = availableFuels.find(f => f.id === selectedFuelId);
           const selectedStakeQty = selectedFuelRecord ? Number(selectedFuelRecord.quantity) : 0;
