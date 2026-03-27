@@ -1,6 +1,8 @@
 # BURN::RATE Fuel Poker
 ### EVE Frontier × Sui Hackathon 2026
 
+**📺 [Watch the 2-Minute Demo Video on YouTube](https://youtu.be/nYP4XYDOH6c)**
+
 This document outlines the final streamlined pipeline for compiling the Poker smart contract, linking it to the Canonical EVE World, and deploying the React DApp.
 
 ## 1. Smart Contract Deployment (Move)

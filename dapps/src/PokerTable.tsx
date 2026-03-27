@@ -655,12 +655,14 @@ export function PokerTable() {
         ) : gameSession ? (
           <Button className="eve-glitch-hover" disabled={loading} onClick={throwCards} style={{ width: "100%", background: "var(--color-frontier-orange)", border: "1px solid var(--color-frontier-orange)", color: "#000", cursor: "pointer", fontWeight: "bold" }}>{loading ? "PROCESSING..." : "DRAW & RESOLVE"}</Button>
         ) : (() => {
+          const isOffline = assembly !== undefined && assembly.state !== undefined && assembly.state !== 1 && assembly.state !== "ONLINE";
+          const noStake = availableFuels.length === 0 || !selectedFuelId;
           const selectedFuelRecord = availableFuels.find(f => f.id === selectedFuelId);
           const selectedStakeQty = selectedFuelRecord ? Number(selectedFuelRecord.quantity) : 0;
           const isInsufficient = maxStake !== null && selectedStakeQty > maxStake;
-          const isDisabled = loading || !isLoggedIn || !selectedFuelId || maxStake === 0 || isInsufficient;
-          const buttonColor = (maxStake === 0 || isInsufficient) ? "var(--color-hostile-red)" : "var(--color-frontier-orange)";
-          const buttonText = loading ? "INITIALIZING..." : !isLoggedIn ? "CONNECT WALLET" : (maxStake === 0 ? "HOUSE FUNDS DEPLETED" : isInsufficient ? "NOT ENOUGH HOUSE FUND" : "DEAL STAKE");
+          const isDisabled = isOffline || loading || !isLoggedIn || noStake || maxStake === 0 || isInsufficient;
+          const buttonColor = (isOffline || noStake || maxStake === 0 || isInsufficient) ? "var(--color-hostile-red)" : "var(--color-frontier-orange)";
+          const buttonText = isOffline ? "SMART ASSEMBLY OFFLINE" : loading ? "INITIALIZING..." : !isLoggedIn ? "CONNECT WALLET" : noStake ? "PLACE STAKE IN STORAGE" : (maxStake === 0 ? "HOUSE FUNDS DEPLETED" : isInsufficient ? "NOT ENOUGH HOUSE FUND" : "DEAL STAKE");
 
           return (
             <Button className="eve-glitch-hover" disabled={isDisabled} onClick={dealCards} style={{ width: "100%", background: "var(--color-button-background)", border: `1px solid ${buttonColor}`, color: buttonColor, cursor: isDisabled ? "not-allowed" : "pointer", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "1px" }}>{buttonText}</Button>
