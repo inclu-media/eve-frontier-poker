@@ -822,6 +822,12 @@ export function PokerTable() {
                 SYS {">"} {message.toUpperCase()}
               </Text>
             </Box>
+
+            <Box mt="3" style={{ background: "var(--color-gunmetal)", padding: "10px", borderLeft: "3px solid var(--color-frontier-orange)" }}>
+              <Text size="1" style={{ color: "#aaa", fontSize: "11px", display: "block" }}>
+                <strong style={{ color: "var(--color-text-muted)" }}>UI QUIRK:</strong> The native EVE game client may visually mix house and player inventories after transactions due to shared deposit events. This is a frontend artifact only. <u>Press ESC and reopen (F)</u> to hard-refresh your physical container view.
+              </Text>
+            </Box>
           </Box>
 
         </Box>

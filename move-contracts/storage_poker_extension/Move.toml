@@ -7,7 +7,7 @@ world = { local = "../../../world-contracts/contracts/world" }
 
 [environments]
 testnet_internal = "4c78adac"
-testnet_utopia = "4c78adac"
-testnet_stillness = "4c78adac"
+testnet_utopia = "0xd12a70c74c1e759445d6f209b01d43d860e97fcf2ef72ccbbd00afd828043f75"
+testnet_stillness = "0x28b497559d65ab320d9da4613bf2498d5946b2c0ae3597ccfda3072ce127448c"
 localnet = "0"
 official-testnet = "0"
